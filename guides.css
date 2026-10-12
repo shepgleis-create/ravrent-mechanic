@@ -1,0 +1,32 @@
+:root{color-scheme:dark}.guide-body{background:#0a0d11;color:#e9eff5;font:14px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.guide-page{max-width:1150px;padding:0 24px;margin:0 auto}
+.guide-top{min-height:79px;display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #26323f}
+.guide-brand{font-size:16px;font-weight:800;text-decoration:none;letter-spacing:1px;white-space:nowrap}.guide-brand span{color:#e59b83}
+.guide-top nav,.guide-footer nav{display:flex;align-items:center;gap:19px;flex-wrap:wrap}
+.guide-top nav a,.guide-footer a{font-size:12px;color:#b5c3cf;text-decoration:none}
+.guide-top nav a:hover,.guide-footer a:hover{color:#fff}
+.guide-hero{padding:90px 0 85px;max-width:850px}
+.guide-kicker,.guide-category{font-size:11px;font-weight:750;color:#e6a08a;letter-spacing:2px}
+.guide-hero h1{font-size:clamp(34px,5.8vw,68px);line-height:1.09;letter-spacing:-2.6px;font-weight:700;margin:18px 0 20px}
+.guide-hero h1 span{color:#a1afbd}
+.guide-hero p{font-size:16px;color:#aab9c7;max-width:700px;line-height:1.8}
+.guide-actions{display:flex;gap:10px;margin-top:27px;flex-wrap:wrap}
+.guide-button{display:inline-flex;background:#e18b74;color:#140d0b!important;font-weight:700;border:1px solid #e18b74;text-decoration:none;border-radius:11px;padding:12px 18px}
+.guide-button.secondary{background:#1b242e;color:#e7eef6!important;border-color:#394755}
+.guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;padding-bottom:55px;border-bottom:1px solid #26313c}
+.guide-grid>a{border:1px solid #35414d;border-radius:13px;background:#141d26;text-decoration:none;min-height:104px;padding:17px 19px;color:#f1f5fa;font-size:14px;font-weight:700}
+.guide-grid>a:hover{border-color:#d38d74;background:#242e39}
+.guide-grid span{display:block;color:#94a6b7;font-size:11px;font-weight:500;margin-top:8px}
+.guide-article{padding:57px 0 46px;border-bottom:1px solid #283541;scroll-margin-top:35px}
+.guide-article h2{font-size:clamp(26px,3.7vw,38px);letter-spacing:-1.2px;line-height:1.25;font-weight:650;max-width:900px;margin:16px 0 24px;color:#f2f6fa}
+.guide-article p{color:#c3cfda;font-size:15px;max-width:850px;line-height:1.95;margin:0 0 17px}
+.guide-article strong{color:#f4efe9}
+.guide-action-line{padding-top:8px}.guide-action-line a{font-size:13px;color:#eead95;font-weight:650;text-decoration:none}
+.guide-about{padding:65px 0;max-width:890px}.guide-about h2{font-size:28px}.guide-about p{color:#afbfcd;line-height:1.9}
+.guide-about a{color:#e2a68e}
+.guide-footer{padding:32px 0 45px;border-top:1px solid #2c3542;display:flex;align-items:center;justify-content:space-between;gap:20px;color:#96a8b9;font-size:12px;flex-wrap:wrap}
+.guide-ad{border:1px solid #35404c;background:#161e28;min-height:70px;padding:15px;margin-top:25px;text-align:center;color:#8093a4}
+.guide-ad[hidden]{display:none}.guide-ad span{font-size:10px;letter-spacing:1.4px;text-transform:uppercase}
+.guide-ad p{font-size:12px;margin:7px}
+@media(max-width:750px){.guide-page{padding:0 18px}.guide-hero{padding:65px 0}.guide-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.guide-top nav{gap:11px}.guide-top nav a{font-size:11px}.guide-article{padding:42px 0}.guide-article p{font-size:14px}.guide-hero h1{letter-spacing:-1.2px}}
+@media(max-width:450px){.guide-grid{grid-template-columns:1fr}.guide-top{flex-direction:column;align-items:flex-start;justify-content:center;padding:13px 0}.guide-top nav{gap:14px}.guide-hero{padding:51px 0 49px}.guide-article h2{font-size:26px}}
