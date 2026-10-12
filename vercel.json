@@ -15,6 +15,15 @@
     },
     "api/video-status.js": {
       "maxDuration": 20
+    },
+    "api/vin.js": {
+      "maxDuration": 15
+    },
+    "api/health.js": {
+      "maxDuration": 10
+    },
+    "api/ads-config.js": {
+      "maxDuration": 10
     }
   }
 }
