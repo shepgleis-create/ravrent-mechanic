@@ -61,3 +61,16 @@ The server has same-origin browser checking, best-effort per-instance IP quotas 
 Chats and vehicle records currently use local browser storage without encryption, multi-device synchronization, or backed-up storage. Only images submitted in conversations are forwarded to the third-party model; no live scanner data or sound analysis has been implemented.
 
 AI diagnostic advice is not an in-person inspection. Always verify measurements, wiring, service procedures, parts and torque values against qualified repair sources, especially with brakes, steering, fuel systems, overheating or electrical risks.
+
+## V3 reliability and useful features (October 12, 2026)
+
+- Eight real **offline** guided diagnostic test flows: electrical/charging, start problems, rattles, misfires, brakes, cooling, automatic transmissions, and A/C. These run even if AI credits are exhausted. Users can record actual observations, check completed tests, export TXT checklists and save a guided report.
+- An **App Diagnostics** screen differentiates "key configured" from a verified successful AI response. A separate button explicitly tests real AI (may incur a small API cost); server/browser and upload-route checks are no-charge.
+- Optional **VIN decoding** from the U.S. NHTSA vPIC public service, with driver verification before storing vehicle details.
+- Main chat defaults to less-expensive standard mode using Gemini 3.5 Flash-Lite; deeper reasoning and external research are explicitly opt-in. Existing browser state switches to the balanced default once.
+- More resilient binary video body reading for hosting runtimes that represent request bodies differently.
+- Original public guide content at `/guides.html` and privacy information at `/privacy.html`, separate from the chat.
+- AdSense **integration hooks only**, disabled until approval and `ADSENSE_ENABLED=true`. Details in [ADVERTISING.md](ADVERTISING.md).
+- New core regression tests, plus a manually launched GitHub Actions **Verify live Ravrent Mechanic** workflow.
+
+**Important:** A GitHub commit is not a live Vercel verification. A successful real AI/video upload must be confirmed on the deployed site. Vercel project access is currently restricted for connected deployments/logs.
