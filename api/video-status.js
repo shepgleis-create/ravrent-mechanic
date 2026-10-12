@@ -1,4 +1,4 @@
-const video=require('./_video');
+const video=require('../lib/video');
 module.exports=async function handler(req,res){
  video.headers(res);
  if(req.method!=='GET'){res.setHeader('Allow','GET');return video.response(res,405,'GET required','METHOD');}
