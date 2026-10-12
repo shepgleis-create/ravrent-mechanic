@@ -147,3 +147,5 @@ input,select,textarea{color-scheme:dark}
 #healthResults .item-card{min-height:165px}
 #healthResults .tag{display:inline-block;margin-bottom:6px}
 @media(max-width:650px){.wizard-panel{padding:16px}.wizard-topic{min-height:115px;padding:16px}.wizard-head{flex-wrap:wrap}}
+
+.vin-entry{display:flex;gap:9px;align-items:center}.vin-entry .field{flex:1;min-width:0}.vin-entry button{flex-shrink:0}.vin-status{font-size:11px;color:#9fb0bf;line-height:1.55;margin-top:4px}@media(max-width:440px){.vin-entry{flex-wrap:wrap}.vin-entry button{width:100%}}
