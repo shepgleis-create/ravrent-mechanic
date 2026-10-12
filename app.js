@@ -353,8 +353,26 @@ $('videoButton').onclick=()=>$('videoInput').click();
 $('videoInput').onchange=async()=>{try{await attachVideo($('videoInput').files[0]);}catch(e){notify('Could not open this recording.');}};
 $('removeVideo').onclick=()=>{videoUploadId++;videoUploading=false;pendingVideo=null;$('videoPreview').classList.add('hide');$('videoInput').value='';$('videoButton').disabled=false;$('sendButton').disabled=pending;};
 document.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=()=>{$('messageInput').value=b.dataset.suggestion;$('messageInput').focus();});
+$('decodeVin').onclick=async()=>{
+ const vin=$('vehicleVin').value.trim().toUpperCase().replace(/\s/g,'');
+ const label=$('vinDecodeStatus'),button=$('decodeVin');
+ if(!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)){label.textContent='Please enter a valid 17-character VIN without I, O or Q.';return;}
+ button.disabled=true;label.textContent='Checking official vehicle records…';
+ try{
+  const response=await fetch('/api/vin?vin='+encodeURIComponent(vin),{cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Vehicle identification unavailable.');
+  const form=$('vehicleForm');
+  for(const key of ['year','make','model']){
+   if(form.elements.namedItem(key))form.elements.namedItem(key).value=data[key]||'';
+  }
+  if(form.elements.namedItem('engine'))form.elements.namedItem('engine').value=[data.engine,data.trim].filter(Boolean).join(' · ').slice(0,80);
+  label.textContent='Vehicle identified: '+data.year+' '+data.make+' '+data.model+'. Verify all details before saving.';
+ }catch(e){label.textContent=e.message||'Unable to decode. Please enter vehicle details manually.';}
+ finally{button.disabled=false;}
+};
 $('vehicleForm').onsubmit=e=>{
- e.preventDefault();const f=new FormData(e.target),v={id:uid(),year:Number(f.get('year')),make:String(f.get('make')||'').trim(),model:String(f.get('model')||'').trim(),engine:String(f.get('engine')||'').trim(),miles:Number(f.get('miles')||0),service:[]};
+ e.preventDefault();const f=new FormData(e.target),v={id:uid(),year:Number(f.get('year')),make:String(f.get('make')||'').trim(),model:String(f.get('model')||'').trim(),engine:String(f.get('engine')||'').trim(),vin:String(f.get('vin')||'').trim().toUpperCase().slice(0,17),miles:Number(f.get('miles')||0),service:[]};
  if(!v.make||!v.model||v.year<1950||v.year>2030||v.miles<0)return notify('Check your vehicle details.');
  data.vehicles.push(v);data.activeVehicleId=v.id;const t=current();if(t)t.vehicleId=v.id;store();close('vehicleModal');render();notify('Vehicle saved.');
 };
