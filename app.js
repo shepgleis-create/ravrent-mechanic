@@ -114,3 +114,124 @@ function retry(i){
  const previous=t.messages.slice(0,i).reverse().find(m=>m.role==='user');if(!previous)return;
  t.messages.pop();send(previous.text,true);
 }
+function serviceRow(s){return '<div class="service-row"><strong>'+esc(s.date||'Date unknown')+' · '+esc(s.type||'Service')+'</strong>'+esc(s.note||'')+(s.miles?' · '+Number(s.miles).toLocaleString()+' miles':'')+'</div>';}
+function renderGarage(){
+ const grid=$('garageGrid');
+ if(!data.vehicles.length){grid.innerHTML='<div class="empty"><h3>No vehicles saved</h3><p>Add a vehicle so Gemini can use the engine, mileage and repair history.</p><button id="firstCar" class="primary-btn">Add vehicle</button></div>';$('firstCar').onclick=()=>modal('vehicleModal');return;}
+ grid.innerHTML=data.vehicles.map(v=>'<div class="item-card"><div class="item-head"><span class="tag'+(v.id===data.activeVehicleId?' active':'')+'">'+(v.id===data.activeVehicleId?'ACTIVE':'SAVED')+'</span>'+svg('car')+'</div><h3>'+esc(carName(v))+'</h3><p>'+esc(v.engine||'Engine unspecified')+' · '+(v.miles?Number(v.miles).toLocaleString()+' miles':'Mileage unknown')+'</p>'+
+ '<div class="card-actions"><button class="outline-btn" data-use="'+esc(v.id)+'">Use in chat</button><button class="outline-btn" data-service="'+esc(v.id)+'">Add service</button><button class="outline-btn" data-delete-car="'+esc(v.id)+'">Remove</button></div>'+
+ '<details style="margin-top:17px"><summary style="cursor:pointer;font-size:12px;color:#777">Maintenance history ('+(v.service?.length||0)+')</summary>'+
+ (v.service?.length?v.service.slice().reverse().map(serviceRow).join(''):'<div class="service-row muted">No records yet</div>')+'</details></div>').join('');
+ grid.querySelectorAll('[data-use]').forEach(b=>b.onclick=()=>{data.activeVehicleId=b.dataset.use;const t=current();if(t)t.vehicleId=b.dataset.use;store();setView('diagnose');notify('Vehicle selected for AI diagnostics.');});
+ grid.querySelectorAll('[data-service]').forEach(b=>b.onclick=()=>{$('serviceForm').reset();$('serviceVehicleId').value=b.dataset.service;modal('serviceModal');});
+ grid.querySelectorAll('[data-delete-car]').forEach(b=>b.onclick=()=>{if(!confirm('Remove this vehicle and its service notes?'))return;data.vehicles=data.vehicles.filter(v=>v.id!==b.dataset.deleteCar);if(data.activeVehicleId===b.dataset.deleteCar)data.activeVehicleId=data.vehicles[0]?.id||null;store();renderGarage();});
+}
+const CODES={
+P0010:['Camshaft actuator circuit — bank 1','VVT electrical or oil control issue','Check sensor data, wiring and command response'],
+P0011:['Camshaft timing over-advanced — bank 1','VVT actuator, oil supply, timing','Compare actual vs commanded cam timing'],
+P0016:['Crank/cam correlation — bank 1 sensor A','Mechanical timing, VVT or sensor signals','Verify oil condition and timing signal correlation'],
+P0101:['MAF sensor range/performance','Intake leaks, airflow reading, wiring','Inspect intake boot and live MAF data'],
+P0117:['Coolant temperature sensor circuit low','Sensor circuit or wiring','Compare temperature to ambient on cold engine'],
+P0128:['Coolant thermostat below regulating temperature','Thermostat or temperature signal','Review warm-up temperature against verified service data'],
+P0171:['System too lean — bank 1','Unmetered air, weak fuel delivery, MAF','Look at short/long fuel trims and leak test'],
+P0174:['System too lean — bank 2','Unmetered air, fuel delivery, MAF','Compare bank fuel trims and intake leaks'],
+P0300:['Random/multiple cylinder misfire','Ignition, fueling, airflow, compression','Review misfire counts and fuel trims'],
+P0301:['Cylinder 1 misfire','Coil, plug, injector or mechanical','Verify affected cylinder, test ignition and compression'],
+P0302:['Cylinder 2 misfire','Coil, plug, injector or mechanical','Compare ignition/fuel function with neighboring cylinders'],
+P0303:['Cylinder 3 misfire','Coil, plug, injector or mechanical','Test spark, fuel and compression'],
+P0304:['Cylinder 4 misfire','Coil, plug, injector or mechanical','Test spark, fuel and compression'],
+P0340:['Camshaft position sensor A circuit — bank 1','Sensor, wiring, timing relation','Verify signal and correct bank'],
+P0345:['Camshaft position sensor A circuit — bank 2','Sensor, wiring, timing relation','Verify ground, supply and signal'],
+P0348:['Camshaft position sensor A circuit high — bank 2','Open or short, sensor signal, connector','Test wiring, supply and signal before buying a sensor'],
+P0420:['Catalyst efficiency below threshold — bank 1','Exhaust leak, mixture or catalyst','Resolve misfires and exhaust leaks first'],
+P0430:['Catalyst efficiency below threshold — bank 2','Exhaust leak, mixture or catalyst','Resolve misfires and exhaust leaks first'],
+P0442:['EVAP small leak','Cap, hose or valve sealing','Check seals and smoke-test EVAP'],
+P0455:['EVAP large leak','Cap, hoses or valve leak','Check for large EVAP leaks'],
+P0500:['Vehicle speed sensor issue','Speed-signal circuit','Read ABS and transmission data'],
+P0562:['System voltage low','Alternator, battery, grounds or wiring','Measure charging voltage under load and voltage drop'],
+P0700:['Transmission control system fault request','Transmission ECU requested MIL','Scan TCM for specific fault codes'],
+P0720:['Output speed sensor circuit malfunction','Transmission speed signal wiring/sensor','Inspect live speed data and circuit']};
+function lookup(){
+ const code=$('codeInput').value.trim().toUpperCase().replace(/\s/g,'');const b=$('codeResult');
+ if(!/^[PBCU][0-3][0-9A-F]{3}$/.test(code)){b.innerHTML='<div class="result">Enter a valid trouble code like P0302, P0171, or P0348.</div>';return;}
+ const c=CODES[code];
+ b.innerHTML='<div class="result"><span class="tag">GENERIC DTC REFERENCE</span><h2 style="margin-top:13px">'+esc(code)+'</h2>'+
+ (c?'<strong>'+esc(c[0])+'</strong><p><b>Related systems:</b> '+esc(c[1])+'</p><p><b>First check:</b> '+esc(c[2])+'</p>':'<p>Not included in the local reference library. Manufacturer-specific data may be required.</p>')+
+ '<p class="muted" style="font-size:12px">A DTC is evidence of a condition, not proof that a part has failed.</p><button class="primary-btn" id="researchCode">Investigate with Gemini</button></div>';
+ $('researchCode').onclick=()=>{newChat();$('messageInput').value='Research diagnostic trouble code '+code+' for '+carName(car())+'. Explain causes, symptoms, useful manufacturer-specific details only if sourced, and the cheapest confirming tests.';$('messageInput').focus();};
+}
+function renderReports(){
+ const box=$('reportGrid');if(!data.reports.length){box.innerHTML='<div class="empty"><h3>No reports saved yet</h3><p>Save your conversations to download detailed diagnostic records.</p></div>';return;}
+ box.innerHTML=[...data.reports].reverse().map(r=>'<div class="item-card"><div class="item-head"><span class="tag">'+esc(new Date(r.date||r.created||Date.now()).toLocaleDateString())+'</span>'+svg('book')+'</div>'+
+ '<h3>'+esc(r.vehicle||'General diagnosis')+'</h3><p>'+esc(r.summary||r.messages?.find(m=>m.role==='user')?.text||'Saved conversation').slice(0,150)+'</p>'+
+ '<div class="card-actions"><button class="outline-btn" data-export="'+esc(r.id)+'">Download TXT</button><button class="outline-btn" data-remove-report="'+esc(r.id)+'">Delete</button></div></div>').join('');
+ box.querySelectorAll('[data-export]').forEach(b=>b.onclick=()=>{const r=data.reports.find(x=>x.id===b.dataset.export);if(r)exportReport(r);});
+ box.querySelectorAll('[data-remove-report]').forEach(b=>b.onclick=()=>{if(!confirm('Delete this report?'))return;data.reports=data.reports.filter(x=>x.id!==b.dataset.removeReport);store();renderReports();});
+}
+function exportReport(r){
+ const lines=['RAVRENT MECHANIC · DIAGNOSTIC REPORT','Date: '+new Date(r.date||r.created).toLocaleString(),'Vehicle: '+r.vehicle,'','AI recommendations are not a verified in-person inspection.',''];
+ for(const m of r.messages||[]){lines.push((m.role==='user'?'DRIVER':m.role==='assistant'?'ASSISTANT':'ERROR')+':');lines.push(m.text||'');if(m.sources?.length){lines.push('Sources:');for(const s of m.sources)lines.push('- '+s.title+' — '+s.url);}lines.push('');}
+ const url=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='ravrent-mechanic-'+new Date(r.date||Date.now()).toISOString().slice(0,10)+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function saveReport(){
+ const t=current();if(!t||!t.messages.some(m=>m.role==='user'))return notify('Ask a question before saving a report.');
+ data.reports.push({id:uid(),date:new Date().toISOString(),vehicle:carName(carFor(t)),summary:t.title,messages:t.messages.map(({role,text,sources})=>({role,text,sources}))});
+ store();notify('Report saved to Reports.');
+}
+function render(){
+ renderNav();$('chatPane').classList.toggle('hide',view!=='diagnose');
+ $('garagePane').classList.toggle('hide',view!=='garage');$('codesPane').classList.toggle('hide',view!=='codes');$('reportsPane').classList.toggle('hide',view!=='reports');
+ if(view==='diagnose')renderChat();if(view==='garage')renderGarage();if(view==='codes')lookup();if(view==='reports')renderReports();
+}
+async function status(){
+ try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();
+ $('connection').textContent=obj.configured?'Gemini configured':'Gemini setup needed';
+ $('connection').classList.toggle('ready',!!obj.configured);$('connection').classList.toggle('warning',!obj.configured);
+ }catch(e){$('connection').textContent='Check AI setup';$('connection').classList.add('warning');}
+}
+async function attach(file){
+ if(!file||!/^image\/(jpeg|png|webp)$/.test(file.type)){notify('Choose a JPEG, PNG, or WebP photo.');return;}
+ if(file.size>11e6){notify('Please choose a photo under 11 MB.');return;}
+ const url=await new Promise((yes,no)=>{const r=new FileReader();r.onload=()=>yes(r.result);r.onerror=no;r.readAsDataURL(file);});
+ const img=await new Promise((yes,no)=>{const i=new Image();i.onload=()=>yes(i);i.onerror=no;i.src=url;});
+ const factor=Math.min(1,1200/Math.max(img.width,img.height));
+ const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.width*factor));canvas.height=Math.max(1,Math.round(img.height*factor));
+ canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+ const encoded=canvas.toDataURL('image/jpeg',.68);
+ if(encoded.length>2400000){notify('Photo still too large. Try a smaller photo.');return;}
+ pendingPhoto=encoded;$('photoThumbnail').src=encoded;$('photoPreview').classList.remove('hide');notify('Photo attached. Ask what you would like examined.');
+}
+$('menuToggle').onclick=()=>{let a=$('sidebar').classList.toggle('open');$('sidebarOverlay').classList.toggle('open',a);};
+$('sidebarOverlay').onclick=closeSidebar;
+$('newThread').onclick=newChat;$('newChatTop').onclick=newChat;
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+$('settingsButton').onclick=()=>modal('aiModal');$('connection').onclick=()=>modal('aiModal');
+$('vehicleButton').onclick=()=>setView('garage');
+$('addVehicle').onclick=()=>{$('vehicleForm').reset();modal('vehicleModal');};
+$('saveReport').onclick=saveReport;
+$('deepToggle').onclick=()=>{data.deep=!(data.deep!==false);store();renderChat();};
+$('webToggle').onclick=()=>{data.research=!(data.research!==false);store();renderChat();};
+$('messageInput').oninput=()=>{const x=$('messageInput');x.style.height='auto';x.style.height=Math.min(x.scrollHeight,160)+'px';};
+$('messageInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send($('messageInput').value);}};
+$('sendButton').onclick=()=>send($('messageInput').value);
+$('codeLookup').onclick=lookup;$('codeInput').onkeydown=e=>{if(e.key==='Enter')lookup();};
+$('photoButton').onclick=()=>$('photoInput').click();
+$('photoInput').onchange=async()=>{try{await attach($('photoInput').files[0]);}catch(e){notify('Could not load this photo.');}};
+$('removePhoto').onclick=()=>{pendingPhoto='';$('photoPreview').classList.add('hide');$('photoInput').value='';};
+document.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=()=>{$('messageInput').value=b.dataset.suggestion;$('messageInput').focus();});
+$('aiForm').onsubmit=e=>{e.preventDefault();passcode=$('accessCode').value.trim();close('aiModal');notify(passcode?'Private code stored for this browser session. Send a question to verify Gemini.':'Access code not entered.');};
+$('vehicleForm').onsubmit=e=>{
+ e.preventDefault();const f=new FormData(e.target),v={id:uid(),year:Number(f.get('year')),make:String(f.get('make')||'').trim(),model:String(f.get('model')||'').trim(),engine:String(f.get('engine')||'').trim(),miles:Number(f.get('miles')||0),service:[]};
+ if(!v.make||!v.model||v.year<1950||v.year>2030||v.miles<0)return notify('Check your vehicle details.');
+ data.vehicles.push(v);data.activeVehicleId=v.id;const t=current();if(t)t.vehicleId=v.id;store();close('vehicleModal');render();notify('Vehicle saved.');
+};
+$('serviceForm').onsubmit=e=>{
+ e.preventDefault();const f=new FormData(e.target),v=data.vehicles.find(x=>x.id===String(f.get('vehicleId')));
+ if(!v)return notify('Vehicle not found.');
+ if(!Array.isArray(v.service))v.service=[];v.service.push({date:String(f.get('date')||''),type:String(f.get('type')||'Service').slice(0,45),miles:Number(f.get('miles')||0),note:String(f.get('note')||'').trim().slice(0,600)});
+ store();close('serviceModal');renderGarage();notify('Service record saved.');
+};
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
+document.querySelectorAll('.modal-back').forEach(m=>m.onclick=e=>{if(e.target===m)close(m.id);});
+render();status();
+})();
