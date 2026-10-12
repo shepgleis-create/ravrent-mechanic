@@ -1,0 +1,9 @@
+{
+  "name": "ravrent-mechanic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile-first guided automotive diagnostic assistant",
+  "engines": {
+    "node": ">=20"
+  }
+}
