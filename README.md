@@ -1,43 +1,49 @@
-# Ravrent Mechanic V2 — Automotive AI Diagnostics
+# Ravrent Mechanic — Integrated Automotive Assistant
 
-Chat-first, mobile-responsive mechanic research assistant by Ravrent Interactive.
+Responsive, dark-themed car troubleshooting web application developed under Ravrent Interactive.
 
-## New in V2
-- Gemini 3.8 Flash with optional high reasoning effort and Google Search grounding
-- Verifiable source links when Google actually uses search; no fabricated research
-- Proper API and quota errors rather than silent fallback to repeated canned replies
-- Separate chat threads, multiple garage vehicles, mileage and maintenance history
-- Vehicle photo attachments for visible problems (no engine sound recognition)
-- OBD-II generic code library, exportable diagnostic reports
-- ChatGPT-style clean conversation interface with original Ravrent branding
+## Current features
+- Integrated chat: visitors are **not** asked for a model-provider API key or a separate access code.
+- Dark interface across chat, garage, trouble codes, saved reports and dialogs, with responsive mobile composer.
+- Deep diagnosis and optional source-backed web research.
+- Transparent research fallback: if the request is rejected because research requires a paid tier or is quota-limited, the backend tries AI reasoning without web research, followed by one lower-cost backup model if the first model is unavailable.
+- Conversations, vehicle profiles, reported repair history, image input and saved/exportable diagnostic reports.
+- Neutral user-facing errors if no actual AI response can be obtained. No fabricated research or canned diagnosis.
 
-## Connect Gemini
+## Server configuration (app owner only)
 
-1. Create a Gemini key at https://aistudio.google.com/api-keys
-2. In Vercel, open ravrent-mechanic → Settings → Environment Variables. Add these server-only Secret values for Production:
-   - GEMINI_API_KEY = the actual Google AI Studio key
-   - MECHANIC_ACCESS_CODE = a separate long random password for private testing
-3. Optional GEMINI_MODEL = gemini-3.8-flash. That model is the default.
-4. Redeploy latest main branch after setting the secrets.
-5. Open the app and use the gear to enter only the private access code, never the Google API key.
-6. Enable both Think deeper and Web research for higher reasoning and Google Search grounding.
+Google Gemini remains the third-party inference service behind the app. The interface is independently branded, but this does **not** mean Ravrent created its own foundation model.
 
-The top bar checks /api/status. It confirms that both environment variables are present, not that Google accepts the credentials. Send a test question to verify the live connection.
+In Vercel, project ravrent-mechanic → Settings → Environment Variables:
 
-Google Search grounding can incur extra charges per search and high thinking consumes more tokens. Review the current billing and quota information at https://ai.google.dev/gemini-api/docs/pricing.
+- `GEMINI_API_KEY` — required. Store as a server-side Secret for Production; **never** commit the value to GitHub or put it into client code.
+- `GEMINI_MODEL` — optional, default `gemini-3.8-flash`.
+- `MECHANIC_ACCESS_CODE` — no longer used by the chat; can be removed from Vercel if desired.
 
-## Project files
-- index.html: chat interface, navigation, modals
-- style.css: responsive styling
-- app.js: threads, diagnoses, garage, service notes, images, reports
-- api/chat.js: Gemini reasoning and grounded search with source attribution
-- api/status.js: no-secret configuration readiness endpoint
-- vercel.json: Vercel functions configuration
+Redeploy the latest production commit after changing environment variables. The public `/api/status` endpoint only reports whether the secret is present, not if a request can succeed.
 
-## Known limitations and safety
+### Why the earlier AI response failed
+The application was requesting Google Search grounding on Gemini 3.8 Flash for every chat by default, but grounding is not available to free-tier API customers for this model. A 429 may also mean the API project's model quota or request allowance is exhausted. The new backend retries without grounded research and can try a lightweight model instead.
 
-This is a private beta, not a public production AI service. Shared access codes and per-instance rate limiting do not replace account authentication and distributed quotas. Add user authentication, data storage, quotas, spend controls and abuse protection before opening this to the public.
+Google documents grounding availability, API rates and tiers at:
+https://ai.google.dev/gemini-api/docs/pricing
 
-Conversations, garage entries and service logs currently live in browser localStorage; they are not cross-device or cloud-synced. Deleting site data loses them. Photo upload works for visual questions; actual OBD-II device scanning, live telemetry, sound analysis, licensed manuals and mechanic booking are not implemented. Google Search is optional and Gemini may return no results.
+Enabling eligible paid billing may be required for deep *live* web research. Never claim web research succeeded if the API does not return search metadata.
 
-AI diagnostics are hypotheses, not a physical inspection. Never drive a vehicle with unsafe steering or brakes, overheating, smoke or fuel leakage. Check manufacturer repair specifications and use qualified professional help when appropriate. Never commit secrets to GitHub or frontend files.
+## Architecture
+- `index.html`: branded chat application shell
+- `style.css`: full graphite dark design and mobile layout
+- `app.js`: client conversations, navigation, attachment compression, garage, code reference and reports
+- `api/chat.js`: server-side inference gateway, optional source grounding, fallback, input limits and request throttling
+- `api/status.js`: no-secrets readiness check
+- `vercel.json`: serverless functions
+
+## Security and launch restrictions
+
+**This is a limited private beta, not a secure public paid product yet.** The website now uses a server-side key automatically. Its chat endpoint may be reachable by anyone with the URL.
+
+The server has same-origin browser checking, best-effort per-instance IP quotas and request-size limits, but **these are not sufficient to prevent abuse or billing exposure** across distributed functions. Before promoting the site, add a real identity solution or Vercel deployment protection, distributed throttling, persistent per-account usage limits, budget monitoring and abuse alerts. Do not rely on browser-provided request headers as authentication.
+
+Chats and vehicle records currently use local browser storage without encryption, multi-device synchronization, or backed-up storage. Only images submitted in conversations are forwarded to the third-party model; no live scanner data or sound analysis has been implemented.
+
+AI diagnostic advice is not an in-person inspection. Always verify measurements, wiring, service procedures, parts and torque values against qualified repair sources, especially with brakes, steering, fuel systems, overheating or electrical risks.
