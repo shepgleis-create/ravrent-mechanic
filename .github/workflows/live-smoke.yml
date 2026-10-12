@@ -23,7 +23,7 @@ jobs:
       - name: Check offline diagnostic tools bundle
         run: |
           curl --fail --location --silent --show-error --max-time 20 -o /tmp/tools.js https://ravrent-mechanic.vercel.app/diagnostic-tools.js
-          grep -q 'Guided Diagnostics' /tmp/tools.js
+          grep -q 'OFFLINE DIAGNOSTIC WORKFLOW' /tmp/tools.js
       - name: Confirm ad loader disabled on chat
         run: |
           if grep -q 'src="/ads.js"' /tmp/website.html; then echo 'Ads must not be in private chat'; exit 1; fi
