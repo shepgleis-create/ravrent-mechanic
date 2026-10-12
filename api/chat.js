@@ -37,8 +37,12 @@ function userParts(m) {
       /^files\/[A-Za-z0-9_-]+$/.test(name)&&uri.endsWith('/'+name)&&
       ['video\/mp4','video\/mov','video\/webm','video\/mpeg','video\/3gpp'].includes(mime)&&
       age>=0&&age<47*60*60*1000;
-    if(!valid)throw Error('INVALID_VIDEO');
-    parts.push({file_data:{mime_type:mime,file_uri:uri}});
+    if(age>=47*60*60*1000){
+      parts.push({text:'An earlier video attachment has expired. If the recording is needed for further diagnosis, ask the user to upload it again.'});
+    }else{
+      if(!valid)throw Error('INVALID_VIDEO');
+      parts.push({file_data:{mime_type:mime,file_uri:uri}});
+    }
   }
   return parts;
 }
