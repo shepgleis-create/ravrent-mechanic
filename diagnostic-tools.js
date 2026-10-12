@@ -100,7 +100,7 @@ async function runChecks(){
  if(!r.ok)throw Error('Server returned '+r.status);
  const x=await r.json();
  items.push(tile('Application server',x.server==='online'?'Responding normally.':'Server returned an unexpected response.',x.server==='online'?'PASS':'WARNING'));
- items.push(tile('AI connection',x.assistant==='configured_unverified'?'API key installed, but a real answer has NOT been tested. Use the button below.':'No valid server setup has been confirmed.',x.assistant==='configured_unverified'?'UNVERIFIED':'ACTION REQUIRED'));}
+ items.push(tile('AI connection',x.assistant==='paused_by_owner'?'AI service is currently paused by the site owner to control spending.':x.assistant==='configured_unverified'?'API key installed, but a real answer has NOT been tested. Use the button below.':'No valid server setup has been confirmed.',x.assistant==='paused_by_owner'?'PAUSED':x.assistant==='configured_unverified'?'UNVERIFIED':'ACTION REQUIRED'));}
  catch(e){items.push(tile('Application server','Could not reach the diagnostic endpoint: '+e.message,'FAIL'));}
  try{const r=await fetch('/api/video-status?name=test',{cache:'no-store'});
  items.push(tile('Video upload endpoints',r.status===400?'Video-processing route is installed (a real clip is still untested).':'Route returned HTTP '+r.status+'; this does not verify actual uploads.',r.status===400?'ROUTE FOUND':'UNVERIFIED'));}
