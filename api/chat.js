@@ -107,9 +107,9 @@ module.exports=async function handler(req,res){
   let contents;
   try{contents=conversation(body.messages);}
   catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':err.message==='INVALID_VIDEO'?'That video is unavailable or expired. Upload it again to continue.':'Conversation format is invalid.',code:'BAD_INPUT'});}
-  const model=process.env.GEMINI_MODEL||'gemini-3.8-flash';
+  const deep=body.deep===true,requestedResearch=body.research===true;
+  const model=deep?(process.env.GEMINI_MODEL||'gemini-3.8-flash'):(process.env.GEMINI_STANDARD_MODEL||'gemini-3.5-flash-lite');
   if(!/^gemini-[a-z0-9.-]{3,48}$/.test(model))return res.status(503).json({error:'The assistant is not configured correctly.',code:'MODEL_CONFIG'});
-  const deep=body.deep!==false,requestedResearch=body.research!==false;
   const prompt=system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle);
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),53000);
