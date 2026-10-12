@@ -12,7 +12,7 @@ function migrate(){const s=fresh();try{const old=JSON.parse(localStorage.getItem
  if(Array.isArray(old.messages)&&old.messages.some(m=>m.role==='user')){const id=uid();s.threads=[{id,title:'Previous diagnosis',vehicleId:s.activeVehicleId,messages:old.messages,created:Date.now(),updated:Date.now()}];s.currentId=id;}
  }}catch(e){}return s;}
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')||migrate();if(!Array.isArray(data.threads)||!Array.isArray(data.vehicles))data=migrate();}catch(e){data=migrate();}
-let pending=false,pendingPhoto='',view='diagnose',spinnerTimer=null,toastTimer=null;
+let pending=false,pendingPhoto='',pendingVideo=null,videoUploading=false,videoUploadId=0,view='diagnose',spinnerTimer=null,toastTimer=null;
 function store(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){notify('Local storage is full. Delete older conversations.');}}
 function notify(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',3900);}
 function modal(s){$(s).classList.add('open');}function close(s){$(s).classList.remove('open');}
@@ -58,7 +58,7 @@ function markdown(s){
  }p();l();if(code.length)out+='<pre><code>'+esc(code.join('\n'))+'</code></pre>';return out;
 }
 function messageHtml(m,i){
- if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
+ if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+(m.video?'<div class="video-pill"><span>▶</span> Video with sound · '+esc(m.video.label||'Vehicle recording')+'</div>':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
  if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>The assistant could not complete this request.</strong> '+esc(/gemini|google/i.test(m.text||'')?'The previous request reached its usage limit. Retry using the updated assistant.':m.text)+'<div><button data-retry="'+i+'">Retry question</button></div></div></div>';
  let sources=Array.isArray(m.sources)?m.sources.filter(s=>s?.url&&/^https:\/\//.test(s.url)):[];
  const links=sources.length?'<div class="sources">'+sources.map(s=>'<a class="source" target="_blank" rel="noopener noreferrer" href="'+esc(s.url)+'">'+svg('globe',true)+esc(s.title||'Reference source')+'</a>').join('')+'</div>':'';
@@ -73,7 +73,7 @@ function renderChat(){
  for(const [name,active] of [['deep',data.deep!==false],['web',data.research!==false]]){
   const b=$(name+'Toggle');b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
  }
- $('sendButton').disabled=pending;
+ $('sendButton').disabled=pending||videoUploading;
  if(pending)spinner();else unspin();
  requestAnimationFrame(()=>scrollBottom());
 }
@@ -84,18 +84,18 @@ function spinner(){
  let i=0;clearInterval(spinnerTimer);spinnerTimer=setInterval(()=>{if($('thinkingText'))$('thinkingText').textContent=phrases[++i%phrases.length];},6500);scrollBottom();
 }
 function unspin(){clearInterval(spinnerTimer);$('spinner')?.remove();}
-function busy(v){pending=v;$('sendButton').disabled=v;$('messageInput').disabled=v;if(v)spinner();else unspin();}
+function busy(v){pending=v;$('sendButton').disabled=v||videoUploading;$('messageInput').disabled=v;if(v)spinner();else unspin();}
 async function send(text,isRetry){
- const q=String(text||'').trim();if(pending||(!q&&!pendingPhoto))return;
+ const q=String(text||'').trim();if(pending||videoUploading||(!q&&!pendingPhoto&&!pendingVideo))return;
  const t=ensureThread();
- if(!isRetry){t.messages.push({role:'user',text:q||'What does this vehicle photo show?',image:pendingPhoto||null,at:Date.now()});if(t.title==='New conversation')t.title=(q||'Vehicle photo analysis').slice(0,46);}
- pendingPhoto='';$('photoPreview').classList.add('hide');$('photoInput').value='';$('messageInput').value='';t.updated=Date.now();
+ if(!isRetry){t.messages.push({role:'user',text:q||(pendingVideo?'Please analyze the motion and audio in this vehicle recording.':'Please inspect this vehicle photo.'),image:pendingPhoto||null,video:pendingVideo||null,at:Date.now()});if(t.title==='New conversation')t.title=(q||(pendingVideo?'Video diagnosis':'Vehicle photo analysis')).slice(0,46);}
+ pendingPhoto='';pendingVideo=null;$('photoPreview').classList.add('hide');$('photoInput').value='';$('videoPreview').classList.add('hide');$('videoInput').value='';$('messageInput').value='';t.updated=Date.now();
  store();renderNav();renderChat();busy(true);
  try{
   const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(-18);
   const lastImage=selected.findLastIndex(m=>m.role==='user'&&m.image);
   const messages=selected.map((m,i)=>({
-   role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
+   role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.video?{video:m.video}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
    body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep!==false,research:data.research!==false})});
@@ -202,6 +202,95 @@ async function attach(file){
  if(encoded.length>2400000){notify('Photo still too large. Try a smaller photo.');return;}
  pendingPhoto=encoded;$('photoThumbnail').src=encoded;$('photoPreview').classList.remove('hide');notify('Photo attached. Ask what you would like examined.');
 }
+
+function videoStatus(text,percentage){
+ $('videoUploadStatus').textContent=text;
+ $('videoProgress').value=Math.min(100,Math.max(0,percentage));
+}
+function videoMime(file){
+ const m=(file?.type||'').toLowerCase().split(';')[0];
+ if(m==='video/quicktime'||/\.mov$/i.test(file?.name||''))return 'video/mov';
+ if(m==='video/x-m4v')return 'video/mp4';
+ return ['video/mp4','video/mov','video/webm','video/mpeg','video/3gpp'].includes(m)?m:null;
+}
+async function videoLength(file){
+ return new Promise(resolve=>{
+  const element=document.createElement('video');
+  const objectUrl=URL.createObjectURL(file);
+  let done=false;
+  const finish=x=>{if(done)return;done=true;element.removeAttribute('src');element.load();URL.revokeObjectURL(objectUrl);resolve(x);};
+  element.preload='metadata';
+  element.onloadedmetadata=()=>finish(Number.isFinite(element.duration)?element.duration:null);
+  element.onerror=()=>finish(null);
+  const timeout=setTimeout(()=>finish(null),5000);
+  const prior=finish;
+  element.src=objectUrl;
+ });
+}
+async function apiJson(url,options){
+ const r=await fetch(url,options);
+ let out={};try{out=await r.json();}catch(e){}
+ if(!r.ok)throw new Error(out.error||((r.status===413)?'Video exceeds the upload size limit.':'Video service could not complete this step.'));
+ return out;
+}
+function delay(ms){return new Promise(ok=>setTimeout(ok,ms));}
+async function waitForVideo(name,id,uploaded){
+ for(let i=0;i<36;i++){
+  if(id!==videoUploadId)throw Error('Upload cancelled.');
+  const state=await apiJson('/api/video-status?name='+encodeURIComponent(name),{cache:'no-store'});
+  if(state.state==='ACTIVE'){uploaded.uri=state.uri||uploaded.uri;uploaded.mimeType=state.mimeType||uploaded.mimeType;return uploaded;}
+  if(state.state==='FAILED')throw Error('This video could not be processed. Try MP4 or a shorter clip.');
+  videoStatus('Processing video and audio…',100);
+  await delay(2500);
+ }
+ throw Error('Video processing is taking longer than expected. Try attaching the video again shortly.');
+}
+async function attachVideo(file){
+ if(!file)return;
+ const mime=videoMime(file),MAX=32*1024*1024;
+ if(!mime){notify('Choose an MP4, MOV or WebM recording.');return;}
+ if(file.size<1||file.size>MAX){notify('The current video limit is 32 MB. Choose a shorter clip.');return;}
+ if(videoUploading){notify('Wait for your current upload or cancel it first.');return;}
+ const id=++videoUploadId;
+ videoUploading=true;pendingVideo=null;
+ $('videoFileName').textContent=file.name||'Vehicle recording';
+ $('videoPreview').classList.remove('hide');videoStatus('Checking the recording…',0);
+ $('sendButton').disabled=true;$('videoButton').disabled=true;
+ try{
+  const duration=await videoLength(file);
+  if(id!==videoUploadId)return;
+  if(duration!==null&&duration>90)throw Error('Choose a recording no longer than 90 seconds. Short clips are easier to diagnose.');
+  videoStatus('Starting encrypted upload…',0);
+  const init=await apiJson('/api/video-start',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({name:file.name,size:file.size,mimeType:mime})});
+  const chunkSize=Math.min(1024*1024,init.chunkSize||1024*1024);
+  let finished=null;
+  for(let offset=0;offset<file.size;offset+=chunkSize){
+   if(id!==videoUploadId)return;
+   const end=Math.min(file.size,offset+chunkSize);
+   const piece=await file.slice(offset,end).arrayBuffer();
+   const result=await apiJson('/api/video-chunk',{method:'POST',headers:{
+      'Content-Type':'application/octet-stream','x-upload-session':init.session,
+      'x-upload-offset':String(offset),'x-upload-final':end===file.size?'1':'0'
+   },body:piece});
+   videoStatus('Uploading video and sound… '+Math.floor(end/file.size*100)+'%',Math.floor(end/file.size*100));
+   if(result.complete)finished=result.file;
+  }
+  if(!finished?.name||!finished.uri)throw Error('The video did not finish uploading.');
+  const meta={uri:finished.uri,mimeType:finished.mimeType||mime,name:finished.name,label:(file.name||'Vehicle video').slice(0,100),uploadedAt:Date.now(),duration:duration===null?null:Math.round(duration)};
+  const ready=finished.state==='ACTIVE'?meta:await waitForVideo(finished.name,id,meta);
+  if(id!==videoUploadId)return;
+  pendingVideo=ready;videoStatus('Video ready — ask a question to analyze it',100);
+  notify('Video and audio attached. Describe what you want investigated.');
+ }catch(e){
+  if(id!==videoUploadId)return;
+  pendingVideo=null;videoStatus('Upload failed: '+(e.message||'Try a shorter clip.'),0);
+  notify('Video upload failed. See the attachment message.');
+ }finally{
+  if(id===videoUploadId){videoUploading=false;$('sendButton').disabled=pending;$('videoButton').disabled=false;}
+ }
+}
+
 $('menuToggle').onclick=()=>{let a=$('sidebar').classList.toggle('open');$('sidebarOverlay').classList.toggle('open',a);};
 $('sidebarOverlay').onclick=closeSidebar;
 $('newThread').onclick=newChat;$('newChatTop').onclick=newChat;
@@ -219,6 +308,9 @@ $('codeLookup').onclick=lookup;$('codeInput').onkeydown=e=>{if(e.key==='Enter')l
 $('photoButton').onclick=()=>$('photoInput').click();
 $('photoInput').onchange=async()=>{try{await attach($('photoInput').files[0]);}catch(e){notify('Could not load this photo.');}};
 $('removePhoto').onclick=()=>{pendingPhoto='';$('photoPreview').classList.add('hide');$('photoInput').value='';};
+$('videoButton').onclick=()=>$('videoInput').click();
+$('videoInput').onchange=async()=>{try{await attachVideo($('videoInput').files[0]);}catch(e){notify('Could not open this recording.');}};
+$('removeVideo').onclick=()=>{videoUploadId++;videoUploading=false;pendingVideo=null;$('videoPreview').classList.add('hide');$('videoInput').value='';$('videoButton').disabled=false;$('sendButton').disabled=pending;};
 document.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=()=>{$('messageInput').value=b.dataset.suggestion;$('messageInput').focus();});
 $('vehicleForm').onsubmit=e=>{
  e.preventDefault();const f=new FormData(e.target),v={id:uid(),year:Number(f.get('year')),make:String(f.get('make')||'').trim(),model:String(f.get('model')||'').trim(),engine:String(f.get('engine')||'').trim(),miles:Number(f.get('miles')||0),service:[]};
