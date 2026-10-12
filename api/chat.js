@@ -29,6 +29,17 @@ function userParts(m) {
     if(!match||match[2].length>2_500_000)throw Error('INVALID_IMAGE');
     parts.push({inline_data:{mime_type:match[1],data:match[2]}});
   }
+  if(m.video&&typeof m.video==='object') {
+    const uri=String(m.video.uri||''),name=String(m.video.name||'');
+    const mime=String(m.video.mimeType||'');
+    const age=Date.now()-Number(m.video.uploadedAt||0);
+    const valid=/^https:\/\/generativelanguage\.googleapis\.com\/v1beta\/files\/[A-Za-z0-9_-]+$/.test(uri)&&
+      /^files\/[A-Za-z0-9_-]+$/.test(name)&&uri.endsWith('/'+name)&&
+      ['video\/mp4','video\/mov','video\/webm','video\/mpeg','video\/3gpp'].includes(mime)&&
+      age>=0&&age<47*60*60*1000;
+    if(!valid)throw Error('INVALID_VIDEO');
+    parts.push({file_data:{mime_type:mime,file_uri:uri}});
+  }
   return parts;
 }
 function conversation(messages) {
@@ -67,7 +78,7 @@ const system = [
 'If the driver says the car has weak brakes, loss of steering, fuel leakage, overheating, smoke, flashing check engine light,',
 'or severe loss of power, advise stopping safely and seeking qualified repair or towing.',
 'Avoid hazardous repair steps for high-voltage systems, airbags, refrigerants, pressurized fuel, or working under unsafe supports.',
-'Visual image input is limited to what is visible; audio and live scanner data are unavailable unless explicitly attached/supplied.',
+'Video input may include visible motion AND recorded sound. Identify what can genuinely be seen and heard, including timestamps when useful; do not equate a recorded sound with a confirmed mechanical fault. There is no actual scanner data or physical inspection unless supplied.',
 'User-maintained garage/service data may be inaccurate. Treat it as reported history, not independently verified facts.',
 'Keep responses clear and appropriately detailed; precise checks before buying parts. Use Markdown headings and tables sparingly.'
 ].join('\n');
@@ -91,7 +102,7 @@ module.exports=async function handler(req,res){
     return res.status(400).json({error:'The conversation is missing or too long.',code:'BAD_INPUT'});
   let contents;
   try{contents=conversation(body.messages);}
-  catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':'Conversation format is invalid.',code:'BAD_INPUT'});}
+  catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':err.message==='INVALID_VIDEO'?'That video is unavailable or expired. Upload it again to continue.':'Conversation format is invalid.',code:'BAD_INPUT'});}
   const model=process.env.GEMINI_MODEL||'gemini-3.8-flash';
   if(!/^gemini-[a-z0-9.-]{3,48}$/.test(model))return res.status(503).json({error:'The assistant is not configured correctly.',code:'MODEL_CONFIG'});
   const deep=body.deep!==false,requestedResearch=body.research!==false;
