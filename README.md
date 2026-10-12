@@ -1,34 +1,51 @@
 # Ravrent Mechanic
 
-Mobile-first automotive diagnostic assistant built by Ravrent Interactive.
+Mobile-first automotive troubleshooting assistant for Ravrent Interactive.
 
-## Features
-- Guided troubleshooting with urgency and safe next-step checks (works with no API key)
-- Garage profiles for vehicles and mileage, stored locally in this browser
-- A starter library of common OBD-II trouble codes (reference only; no scanner connection)
-- Diagnostic history and downloadable text reports
-- Optional live AI through a guarded Vercel API route
+## Live AI provider: Google Gemini
+
+The app has two modes:
+- **Guided diagnostics**: offline rule-based explanations, without an API key.
+- **Google Gemini AI**: live, vehicle-aware conversational troubleshooting through `api/chat.js`.
+
+The AI endpoint supports multi-turn chat, vehicle context, and an optional inline photo in the last user message (the current browser interface has not yet added the photo-picker control).
+
+### Configure Google Gemini on Vercel
+
+1. Create your Google Gemini API key from https://aistudio.google.com/api-keys (Google AI Studio).
+2. Open Vercel → `ravrent-mechanic` → Settings → Environment Variables.
+3. Add the following **private** environment variables for Production:
+   - `GEMINI_API_KEY`: paste the secret from Google AI Studio.
+   - `MECHANIC_ACCESS_CODE`: create a long random access password for private testing.
+   - `GEMINI_MODEL` (optional): defaults to `gemini-3.8-flash`. For lower-cost use where available, choose `gemini-3.5-flash-lite`.
+4. Redeploy the Production deployment to load the changed configuration.
+5. Open the app, click **Connect Google Gemini**, enter **only your access code**, then send a diagnostic question.
+
+**Never commit, share, or enter the Gemini API key in the browser.** `.env.example` contains *variable names only*. Keep actual secrets in Vercel. OpenAI configuration is not needed.
+
+### Current capabilities
+
+- Responsive mobile-first interface
+- Multi-car My Garage with local browser storage
+- Guided diagnostics with safety triage and checks before replacing parts
+- Starter OBD-II trouble-code reference (generic definitions, not a scanner)
+- Saved diagnostic reports with text downloads
+- Optional protected Gemini conversational API
+
+### Current limitations
+
+- Garage entries and report history remain in local browser storage, not synchronized to user accounts.
+- No direct Bluetooth OBD scanner, live vehicle telemetry, recall lookup, licensed service manual data, automatic engine sound analysis, or mechanic directory yet.
+- Photo support is prepared server-side only; frontend photo uploads are not yet implemented.
+- Private-testing access code is **not public authentication**. Add proper user login, shared database, persistent distributed rate limits, per-account usage quota, cost monitoring, and abuse controls before publicly opening AI chat.
+- Current rate limiting is only per running serverless instance; it is not a production abuse control.
+- Diagnoses are suggestions, never proof. Use verified service info and professional inspection for important repairs or safety-critical systems.
 
 ## Architecture
-- `index.html`: self-contained responsive web app
-- `api/chat.js`: optional Node.js serverless endpoint for AI reasoning
-- `vercel.json`: Vercel function configuration
-- `.env.example`: names of environment variables (no actual secrets)
 
-The app can be opened locally with a static file server such as `python3 -m http.server 8080`. Guided troubleshooting remains functional even when the AI API is unconfigured.
+- `index.html`: mobile UI, client-side state, rule-based guided mode.
+- `api/chat.js`: Vercel Node serverless handler using the Google Gemini `generateContent` API.
+- `vercel.json`: Vercel function configuration.
+- `.env.example`: example keys, with no actual secrets.
 
-## Deploy to Vercel
-1. Import `shepgleis-create/ravrent-mechanic` into Vercel as a standalone project.
-2. Leave **Framework Preset** as Other and **Root Directory** as `./`.
-3. For optional live AI, set `OPENAI_API_KEY` and `MECHANIC_ACCESS_CODE` as private Vercel environment variables. `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`.
-4. Redeploy, then enter only the access code (never the API key) using **Connect live AI** in the app.
-
-Do **not** put API keys or access codes into GitHub files, HTML, or a public-facing environment variable.
-
-## Safety and current limitations
-- This is a prototype. It cannot confirm mechanical failures or replace professional inspection or verified service information.
-- Trouble-code references are incomplete and may not cover manufacturer-specific codes.
-- No live OBD-II Bluetooth scanning, recall feed, licensed repair manuals, vehicle audio/video diagnosis, or mechanic network is connected yet.
-- Browser `localStorage` is device/browser-specific, not cloud-backed.
-- The access-code system is **private-test-only**, not suitable for a public paid AI service. Add real authentication, server-side rate limiting, abuse protection, usage quotas, monitoring, and database before opening AI access publicly.
-- Stop driving and seek professional help for serious brake, steering, fuel leak, overheating, smoke, or other safety-critical symptoms.
+Git pushes to `main` should deploy automatically *if* the Vercel project is properly Git-linked and has deployment permissions.
