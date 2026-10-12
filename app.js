@@ -12,7 +12,7 @@ function migrate(){const s=fresh();try{const old=JSON.parse(localStorage.getItem
  if(Array.isArray(old.messages)&&old.messages.some(m=>m.role==='user')){const id=uid();s.threads=[{id,title:'Previous diagnosis',vehicleId:s.activeVehicleId,messages:old.messages,created:Date.now(),updated:Date.now()}];s.currentId=id;}
  }}catch(e){}return s;}
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')||migrate();if(!Array.isArray(data.threads)||!Array.isArray(data.vehicles))data=migrate();}catch(e){data=migrate();}
-let passcode='',pending=false,pendingPhoto='',view='diagnose',spinnerTimer=null,toastTimer=null;
+let pending=false,pendingPhoto='',view='diagnose',spinnerTimer=null,toastTimer=null;
 function store(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){notify('Local storage is full. Delete older conversations.');}}
 function notify(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',3900);}
 function modal(s){$(s).classList.add('open');}function close(s){$(s).classList.remove('open');}
@@ -59,11 +59,11 @@ function markdown(s){
 }
 function messageHtml(m,i){
  if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
- if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>Gemini could not answer.</strong> '+esc(m.text)+'<div><button data-retry="'+i+'">Retry question</button></div></div></div>';
+ if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>The assistant could not complete this request.</strong> '+esc(/gemini|google/i.test(m.text||'')?'The previous request reached its usage limit. Retry using the updated assistant.':m.text)+'<div><button data-retry="'+i+'">Retry question</button></div></div></div>';
  let sources=Array.isArray(m.sources)?m.sources.filter(s=>s?.url&&/^https:\/\//.test(s.url)):[];
  const links=sources.length?'<div class="sources">'+sources.map(s=>'<a class="source" target="_blank" rel="noopener noreferrer" href="'+esc(s.url)+'">'+svg('globe',true)+esc(s.title||'Reference source')+'</a>').join('')+'</div>':'';
- const research=m.researchRequested?(m.researchPerformed?'Google research used'+(sources.length?' · '+sources.length+' references':''):'No verified web sources returned'):'Web research not requested';
- return '<div class="message assistant"><div class="who">R</div><div class="message-body">'+markdown(m.text)+links+'<div class="message-meta">'+esc(m.model||'Gemini')+' · '+esc(m.mode||'AI answer')+' · '+research+'</div></div></div>';
+ const research=m.researchRequested?(m.researchPerformed?'Web research used'+(sources.length?' · '+sources.length+' references':''):'No verified web sources returned'):'Web research not requested';
+ return '<div class="message assistant"><div class="who">R</div><div class="message-body">'+markdown(m.text)+links+(m.researchNote?'<div class="analysis-note">'+esc(m.researchNote)+'</div>':'')+'<div class="message-meta">'+esc(m.mode||'AI response')+' · '+research+'</div></div></div>';
 }
 function renderChat(){
  const t=ensureThread();$('welcome').classList.toggle('hide',!!t.messages.length);
@@ -79,15 +79,14 @@ function renderChat(){
 }
 function scrollBottom(){const s=$('chatScroll');if(s)s.scrollTop=s.scrollHeight;}
 function spinner(){
- if(!$('spinner')){const n=document.createElement('div');n.id='spinner';n.className='message assistant';n.innerHTML='<div class="who">R</div><div class="thinking"><span class="spinner"></span><span id="thinkingText">Gemini is analyzing your question…</span></div>';$('chatList').append(n);}
- const phrases=data.research!==false?['Gemini is analyzing your question…','Comparing diagnostic possibilities…','Waiting for research and diagnostic response…','Preparing your answer…']:['Gemini is analyzing your question…','Evaluating the symptoms…','Preparing your answer…'];
+ if(!$('spinner')){const n=document.createElement('div');n.id='spinner';n.className='message assistant';n.innerHTML='<div class="who">R</div><div class="thinking"><span class="spinner"></span><span id="thinkingText">Analyzing the issue…</span></div>';$('chatList').append(n);}
+ const phrases=data.research!==false?['Analyzing the issue…','Comparing diagnostic possibilities…','Waiting for research and diagnostic response…','Preparing your answer…']:['Analyzing the issue…','Evaluating the symptoms…','Preparing your answer…'];
  let i=0;clearInterval(spinnerTimer);spinnerTimer=setInterval(()=>{if($('thinkingText'))$('thinkingText').textContent=phrases[++i%phrases.length];},6500);scrollBottom();
 }
 function unspin(){clearInterval(spinnerTimer);$('spinner')?.remove();}
 function busy(v){pending=v;$('sendButton').disabled=v;$('messageInput').disabled=v;if(v)spinner();else unspin();}
 async function send(text,isRetry){
  const q=String(text||'').trim();if(pending||(!q&&!pendingPhoto))return;
- if(!passcode){modal('aiModal');notify('Enter your private access code to use real Gemini AI.');return;}
  const t=ensureThread();
  if(!isRetry){t.messages.push({role:'user',text:q||'What does this vehicle photo show?',image:pendingPhoto||null,at:Date.now()});if(t.title==='New conversation')t.title=(q||'Vehicle photo analysis').slice(0,46);}
  pendingPhoto='';$('photoPreview').classList.add('hide');$('photoInput').value='';$('messageInput').value='';t.updated=Date.now();
@@ -98,17 +97,16 @@ async function send(text,isRetry){
   const messages=selected.map((m,i)=>({
    role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
-  const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-app-passcode':passcode},
+  const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
    body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep!==false,research:data.research!==false})});
   let result={};try{result=await response.json();}catch(e){}
   if(!response.ok||!result.reply){let error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;throw error;}
-  t.messages.push({role:'assistant',text:result.reply,model:result.model||'Gemini',mode:result.mode||'AI answer',
-   sources:result.sources||[],researchRequested:result.researchRequested,researchPerformed:result.researchPerformed,
+  t.messages.push({role:'assistant',text:result.reply,mode:result.mode||'AI response',
+   sources:result.sources||[],researchRequested:result.researchRequested,researchPerformed:result.researchPerformed,researchNote:result.researchNote||null,
    modelParts:result.modelParts||null,at:Date.now()});
  }catch(e){
-  const reason=e.status===401?'Private access code rejected; reconnect with the correct code.':e.status===503?'Gemini is not configured on Vercel. Set environment variables and redeploy.':e.message||'Network failed.';
+  const reason=e.message||'The assistant is unavailable right now. Please try again soon.';
   t.messages.push({role:'error',text:reason,at:Date.now()});
-  if(e.status===401)passcode='';
  }finally{t.updated=Date.now();busy(false);store();renderNav();renderChat();}
 }
 function retry(i){
@@ -119,7 +117,7 @@ function retry(i){
 function serviceRow(s){return '<div class="service-row"><strong>'+esc(s.date||'Date unknown')+' · '+esc(s.type||'Service')+'</strong>'+esc(s.note||'')+(s.miles?' · '+Number(s.miles).toLocaleString()+' miles':'')+'</div>';}
 function renderGarage(){
  const grid=$('garageGrid');
- if(!data.vehicles.length){grid.innerHTML='<div class="empty"><h3>No vehicles saved</h3><p>Add a vehicle so Gemini can use the engine, mileage and repair history.</p><button id="firstCar" class="primary-btn">Add vehicle</button></div>';$('firstCar').onclick=()=>modal('vehicleModal');return;}
+ if(!data.vehicles.length){grid.innerHTML='<div class="empty"><h3>No vehicles saved</h3><p>Add a vehicle so the assistant can use the engine, mileage and repair history.</p><button id="firstCar" class="primary-btn">Add vehicle</button></div>';$('firstCar').onclick=()=>modal('vehicleModal');return;}
  grid.innerHTML=data.vehicles.map(v=>'<div class="item-card"><div class="item-head"><span class="tag'+(v.id===data.activeVehicleId?' active':'')+'">'+(v.id===data.activeVehicleId?'ACTIVE':'SAVED')+'</span>'+svg('car')+'</div><h3>'+esc(carName(v))+'</h3><p>'+esc(v.engine||'Engine unspecified')+' · '+(v.miles?Number(v.miles).toLocaleString()+' miles':'Mileage unknown')+'</p>'+
  '<div class="card-actions"><button class="outline-btn" data-use="'+esc(v.id)+'">Use in chat</button><button class="outline-btn" data-service="'+esc(v.id)+'">Add service</button><button class="outline-btn" data-delete-car="'+esc(v.id)+'">Remove</button></div>'+
  '<details style="margin-top:17px"><summary style="cursor:pointer;font-size:12px;color:#777">Maintenance history ('+(v.service?.length||0)+')</summary>'+
@@ -159,7 +157,7 @@ function lookup(){
  const c=CODES[code];
  b.innerHTML='<div class="result"><span class="tag">GENERIC DTC REFERENCE</span><h2 style="margin-top:13px">'+esc(code)+'</h2>'+
  (c?'<strong>'+esc(c[0])+'</strong><p><b>Related systems:</b> '+esc(c[1])+'</p><p><b>First check:</b> '+esc(c[2])+'</p>':'<p>Not included in the local reference library. Manufacturer-specific data may be required.</p>')+
- '<p class="muted" style="font-size:12px">A DTC is evidence of a condition, not proof that a part has failed.</p><button class="primary-btn" id="researchCode">Investigate with Gemini</button></div>';
+ '<p class="muted" style="font-size:12px">A DTC is evidence of a condition, not proof that a part has failed.</p><button class="primary-btn" id="researchCode">Research this code</button></div>';
  $('researchCode').onclick=()=>{newChat();$('messageInput').value='Research diagnostic trouble code '+code+' for '+carName(car())+'. Explain causes, symptoms, useful manufacturer-specific details only if sourced, and the cheapest confirming tests.';$('messageInput').focus();};
 }
 function renderReports(){
@@ -188,7 +186,7 @@ function render(){
 }
 async function status(){
  try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();
- $('connection').textContent=obj.configured?'Gemini configured':'Gemini setup needed';
+ $('connection').textContent=obj.configured?'Assistant configured':'Assistant unavailable';
  $('connection').classList.toggle('ready',!!obj.configured);$('connection').classList.toggle('warning',!obj.configured);
  }catch(e){$('connection').textContent='Check AI setup';$('connection').classList.add('warning');}
 }
@@ -208,7 +206,7 @@ $('menuToggle').onclick=()=>{let a=$('sidebar').classList.toggle('open');$('side
 $('sidebarOverlay').onclick=closeSidebar;
 $('newThread').onclick=newChat;$('newChatTop').onclick=newChat;
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
-$('settingsButton').onclick=()=>modal('aiModal');$('connection').onclick=()=>modal('aiModal');
+$('settingsButton').onclick=()=>modal('aiModal');
 $('vehicleButton').onclick=()=>setView('garage');
 $('addVehicle').onclick=()=>{$('vehicleForm').reset();modal('vehicleModal');};
 $('saveReport').onclick=saveReport;
@@ -222,7 +220,6 @@ $('photoButton').onclick=()=>$('photoInput').click();
 $('photoInput').onchange=async()=>{try{await attach($('photoInput').files[0]);}catch(e){notify('Could not load this photo.');}};
 $('removePhoto').onclick=()=>{pendingPhoto='';$('photoPreview').classList.add('hide');$('photoInput').value='';};
 document.querySelectorAll('[data-suggestion]').forEach(b=>b.onclick=()=>{$('messageInput').value=b.dataset.suggestion;$('messageInput').focus();});
-$('aiForm').onsubmit=e=>{e.preventDefault();passcode=$('accessCode').value.trim();close('aiModal');notify(passcode?'Private code stored for this browser session. Send a question to verify Gemini.':'Access code not entered.');};
 $('vehicleForm').onsubmit=e=>{
  e.preventDefault();const f=new FormData(e.target),v={id:uid(),year:Number(f.get('year')),make:String(f.get('make')||'').trim(),model:String(f.get('model')||'').trim(),engine:String(f.get('engine')||'').trim(),miles:Number(f.get('miles')||0),service:[]};
  if(!v.make||!v.model||v.year<1950||v.year>2030||v.miles<0)return notify('Check your vehicle details.');
