@@ -2,7 +2,10 @@
   "version": 2,
   "functions": {
     "api/chat.js": {
-      "maxDuration": 30
+      "maxDuration": 60
+    },
+    "api/status.js": {
+      "maxDuration": 10
     }
   }
 }
