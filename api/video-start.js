@@ -29,8 +29,16 @@ module.exports=async function handler(req,res){
     r.status===429?'Video upload capacity is currently limited. Try again later.':'Could not start this video upload.','UPLOAD_START_FAILED');
   const url=r.headers.get('x-goog-upload-url');
   if(!video.urlAllowed(url))return video.response(res,502,'Video upload service did not return a valid session.','UPLOAD_SESSION');
+  // Respect the upload service's required chunk granularity. All non-final
+  // chunks must be multiples of this value.
+  const granularityRaw=r.headers.get('x-goog-upload-chunk-granularity');
+  const granularity=granularityRaw?Number(granularityRaw):262144;
+  if(!Number.isSafeInteger(granularity)||granularity<1||granularity>video.CHUNK)
+    return video.response(res,503,'The video service requires an unsupported upload chunk size.','CHUNK_ALIGNMENT');
+  const chunkSize=Math.floor(video.CHUNK/granularity)*granularity;
+  if(chunkSize<granularity)return video.response(res,503,'Video upload chunk alignment failed.','CHUNK_ALIGNMENT');
   const token=video.pack({url,size:length,mime:type,created:Date.now()});
-  return res.status(200).json({session:token,chunkSize:video.CHUNK,maxSize:video.LIMIT});
+  return res.status(200).json({session:token,chunkSize,maxSize:video.LIMIT});
  }catch(e){return video.response(res,503,'Video upload service is unavailable. Please retry.','UPLOAD_NETWORK');}
  finally{clearTimeout(timer);}
 };
