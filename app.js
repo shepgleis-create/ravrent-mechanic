@@ -217,13 +217,12 @@ async function videoLength(file){
  return new Promise(resolve=>{
   const element=document.createElement('video');
   const objectUrl=URL.createObjectURL(file);
-  let done=false;
-  const finish=x=>{if(done)return;done=true;element.removeAttribute('src');element.load();URL.revokeObjectURL(objectUrl);resolve(x);};
+  let done=false,timer=null;
+  const finish=x=>{if(done)return;done=true;if(timer!==null)clearTimeout(timer);element.removeAttribute('src');element.load();URL.revokeObjectURL(objectUrl);resolve(x);};
   element.preload='metadata';
   element.onloadedmetadata=()=>finish(Number.isFinite(element.duration)?element.duration:null);
   element.onerror=()=>finish(null);
-  const timeout=setTimeout(()=>finish(null),5000);
-  const prior=finish;
+  timer=setTimeout(()=>finish(null),5000);
   element.src=objectUrl;
  });
 }
