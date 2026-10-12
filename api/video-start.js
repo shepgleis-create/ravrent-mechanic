@@ -3,6 +3,7 @@ const starts=new Map();
 module.exports=async function handler(req,res){
  video.headers(res);
  if(req.method!=='POST'){res.setHeader('Allow','POST');return video.response(res,405,'POST required','METHOD');}
+ if(process.env.VIDEO_UPLOADS_ENABLED==='false')return video.response(res,503,'Video analysis is temporarily paused.','OWNER_PAUSED');
  if(!process.env.GEMINI_API_KEY)return video.response(res,503,'Video analysis is not configured on this deployment.','NOT_CONFIGURED');
  const origin=req.headers?.origin,host=req.headers?.host;
  if(origin&&host){try{if(new URL(origin).host!==host)return video.response(res,403,'Request not allowed.','ORIGIN');}
