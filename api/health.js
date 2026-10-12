@@ -7,7 +7,7 @@ module.exports=function handler(req,res){
  // Presence alone DOES NOT verify billing, key validity or model availability.
  return res.status(200).json({
    server:'online',
-   assistant:hasKey?'configured_unverified':'not_configured',
+   assistant:process.env.AI_REQUESTS_ENABLED==='false'?'paused_by_owner':(hasKey?'configured_unverified':'not_configured'),
    uploadRoutes:true,
    providerTested:false,
    build:'diagnostics-v3',
