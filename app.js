@@ -5,7 +5,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const glyph={menu:'M4 6h16M4 12h16M4 18h16',plus:'M12 5v14M5 12h14',car:'M3 15l3-9h12l3 9M4 15h16v5h-3v-2H7v2H4z',search:'M11 3a8 8 0 1 0 0 16a8 8 0 1 0 0-16M17 17l5 5',chat:'M3 12a9 9 0 0 1 18 0a9 9 0 0 1-9 9H5l-2 2z',book:'M6 3h11l3 3v15H6zM16 3v4h4M9 12h8M9 16h8',gear:'M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2',spark:'M12 2l2 8 8 2-8 2-2 8-2-8-8-2 8-2z',globe:'M3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18',send:'M12 19V5M5 12l7-7 7 7',image:'M3 4h18v16H3zM5 17l5-5 4 4 3-3 3 4'};
 const svg=(n,small)=>'<svg class="svg'+(small?' small-svg':'')+'" viewBox="0 0 24 24" aria-hidden="true"><path d="'+(glyph[n]||glyph.spark)+'"/></svg>';
 const KEY='ravrent-mechanic-v2';
-function fresh(){return {vehicles:[],activeVehicleId:null,threads:[],currentId:null,reports:[],deep:true,research:true};}
+function fresh(){return {vehicles:[],activeVehicleId:null,threads:[],currentId:null,reports:[],deep:false,research:false};}
 function migrate(){const s=fresh();try{const old=JSON.parse(localStorage.getItem('ravrent-mechanic-v1')||'null');if(old){
  s.vehicles=Array.isArray(old.vehicles)?old.vehicles.map(v=>({...v,service:[]})):[];
  s.activeVehicleId=old.active||null;s.reports=Array.isArray(old.reports)?old.reports:[];
@@ -14,6 +14,11 @@ function migrate(){const s=fresh();try{const old=JSON.parse(localStorage.getItem
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')||migrate();if(!Array.isArray(data.threads)||!Array.isArray(data.vehicles))data=migrate();}catch(e){data=migrate();}
 let pending=false,pendingPhoto='',pendingVideo=null,videoUploading=false,videoUploadId=0,view='diagnose',spinnerTimer=null,toastTimer=null;
 function store(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){notify('Local storage is full. Delete older conversations.');}}
+if(data.budgetProfileVersion!==1){
+ // Earlier versions turned expensive deep research on automatically.
+ // Reset just once to a functional economical default, with user opt-in.
+ data.deep=false;data.research=false;data.budgetProfileVersion=1;store();
+}
 function notify(s){$('toast').textContent=s;$('toast').style.display='block';clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').style.display='none',3900);}
 function modal(s){$(s).classList.add('open');}function close(s){$(s).classList.remove('open');}
 function car(){return data.vehicles.find(v=>v.id===data.activeVehicleId)||null;}
@@ -70,7 +75,7 @@ function renderChat(){
  $('chatList').innerHTML=t.messages.map(messageHtml).join('');
  $('chatList').querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>retry(Number(b.dataset.retry)));
  $('activeVehicleLabel').textContent=carName(carFor(t));
- for(const [name,active] of [['deep',data.deep!==false],['web',data.research!==false]]){
+ for(const [name,active] of [['deep',data.deep===true],['web',data.research===true]]){
   const b=$(name+'Toggle');b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
  }
  $('sendButton').disabled=pending||videoUploading;
@@ -80,7 +85,7 @@ function renderChat(){
 function scrollBottom(){const s=$('chatScroll');if(s)s.scrollTop=s.scrollHeight;}
 function spinner(){
  if(!$('spinner')){const n=document.createElement('div');n.id='spinner';n.className='message assistant';n.innerHTML='<div class="who">R</div><div class="thinking"><span class="spinner"></span><span id="thinkingText">Analyzing the issue…</span></div>';$('chatList').append(n);}
- const phrases=data.research!==false?['Analyzing the issue…','Comparing diagnostic possibilities…','Waiting for research and diagnostic response…','Preparing your answer…']:['Analyzing the issue…','Evaluating the symptoms…','Preparing your answer…'];
+ const phrases=data.research===true?['Analyzing the issue…','Comparing diagnostic possibilities…','Waiting for research and diagnostic response…','Preparing your answer…']:['Analyzing the issue…','Evaluating the symptoms…','Preparing your answer…'];
  let i=0;clearInterval(spinnerTimer);spinnerTimer=setInterval(()=>{if($('thinkingText'))$('thinkingText').textContent=phrases[++i%phrases.length];},6500);scrollBottom();
 }
 function unspin(){clearInterval(spinnerTimer);$('spinner')?.remove();}
@@ -98,7 +103,7 @@ async function send(text,isRetry){
    role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.video?{video:m.video}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep!==false,research:data.research!==false})});
+   body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep===true,research:data.research===true})});
   let result={};try{result=await response.json();}catch(e){}
   if(!response.ok||!result.reply){let error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;throw error;}
   t.messages.push({role:'assistant',text:result.reply,mode:result.mode||'AI response',
@@ -186,7 +191,7 @@ function render(){
 }
 async function status(){
  try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();
- $('connection').textContent=obj.configured?'Assistant configured':'Assistant unavailable';
+ $('connection').textContent=obj.configured?'AI setup found · test recommended':'Assistant unavailable';
  $('connection').classList.toggle('ready',!!obj.configured);$('connection').classList.toggle('warning',!obj.configured);
  }catch(e){$('connection').textContent='Check AI setup';$('connection').classList.add('warning');}
 }
@@ -335,8 +340,8 @@ $('settingsButton').onclick=()=>modal('aiModal');
 $('vehicleButton').onclick=()=>setView('garage');
 $('addVehicle').onclick=()=>{$('vehicleForm').reset();modal('vehicleModal');};
 $('saveReport').onclick=saveReport;
-$('deepToggle').onclick=()=>{data.deep=!(data.deep!==false);store();renderChat();};
-$('webToggle').onclick=()=>{data.research=!(data.research!==false);store();renderChat();};
+$('deepToggle').onclick=()=>{data.deep=!(data.deep===true);store();renderChat();};
+$('webToggle').onclick=()=>{data.research=!(data.research===true);store();renderChat();};
 $('messageInput').oninput=()=>{const x=$('messageInput');x.style.height='auto';x.style.height=Math.min(x.scrollHeight,160)+'px';};
 $('messageInput').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send($('messageInput').value);}};
 $('sendButton').onclick=()=>send($('messageInput').value);
