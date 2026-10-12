@@ -30,6 +30,20 @@ https://ai.google.dev/gemini-api/docs/pricing
 
 Enabling eligible paid billing may be required for deep *live* web research. Never claim web research succeeded if the API does not return search metadata.
 
+## Video and engine-sound analysis
+
+The mobile chat composer now has a video attachment control next to the photo button.
+
+- Accepts MP4, MOV (including iPhone QuickTime recordings) and WebM. The browser checks available video duration metadata and restricts to 90 seconds; the server independently limits uploads to 32 MiB.
+- Uses resumable, 1 MiB binary chunks through Vercel functions to work around Vercel's 4.5 MB function request limit. These chunks are proxied server-side into Google Gemini Files API without sending the API key to the browser.
+- The server uses a short-lived encrypted session token bound to the upload URL, MIME type and full file size. Uploaded videos are processed as **actual video plus recorded audio**, not fake screenshots.
+- After upload, the client polls until the video is ready, then includes the temporary file URI in the assistant's conversation. Replies can discuss specific observed sounds, motion and timestamps. An observation is not a mechanically confirmed diagnosis.
+- The provider's uploaded files expire after roughly 48 hours. Older conversations remain saved as text, and expired clips must be uploaded again.
+- Clips are processed by a third-party AI service. Video upload and analysis may count against API quotas and incur charges.
+- Audio-only sound uploads, live Bluetooth scanners, waveform measurements and calibrated decibel/frequency analysis are **not** included yet.
+
+**Known deployment constraints:** A request to analyze a video requires working Gemini API credentials and available model quota; upload succeeding does not guarantee a diagnostic answer. The upload feature has preliminary per-instance limits, but anonymous public uploads still present cost and abuse risks. Before a public launch, implement real user accounts, distributed rate limits, usage budgets, upload cleanup and project-wide cost monitoring.
+
 ## Architecture
 - `index.html`: branded chat application shell
 - `style.css`: full graphite dark design and mobile layout
