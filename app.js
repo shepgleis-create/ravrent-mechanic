@@ -229,7 +229,12 @@ async function videoLength(file){
 async function apiJson(url,options){
  const r=await fetch(url,options);
  let out={};try{out=await r.json();}catch(e){}
- if(!r.ok)throw new Error(out.error||((r.status===413)?'Video exceeds the upload size limit.':'Video service could not complete this step.'));
+ if(!r.ok){
+   const error=new Error(out.error||((r.status===413)?'Video exceeds the upload size limit.':'Video service could not complete this step.'));
+   error.status=r.status;error.code=out.code||'HTTP_ERROR';
+   error.received=out.received;error.upstreamStatus=out.upstreamStatus;
+   throw error;
+ }
  return out;
 }
 function delay(ms){return new Promise(ok=>setTimeout(ok,ms));}
@@ -262,18 +267,50 @@ async function attachVideo(file){
   videoStatus('Starting encrypted upload…',0);
   const init=await apiJson('/api/video-start',{method:'POST',headers:{'Content-Type':'application/json'},
      body:JSON.stringify({name:file.name,size:file.size,mimeType:mime})});
-  const chunkSize=Math.min(1024*1024,init.chunkSize||1024*1024);
-  let finished=null;
-  for(let offset=0;offset<file.size;offset+=chunkSize){
+  const chunkSize=Math.max(262144,Math.min(3*1024*1024,init.chunkSize||1024*1024));
+  let finished=null,offset=0,iterations=0;
+  while(offset<file.size){
    if(id!==videoUploadId)return;
+   if(++iterations>200)throw Error('The video upload could not make progress. Try a shorter clip.');
    const end=Math.min(file.size,offset+chunkSize);
    const piece=await file.slice(offset,end).arrayBuffer();
-   const result=await apiJson('/api/video-chunk',{method:'POST',headers:{
-      'Content-Type':'application/octet-stream','x-upload-session':init.session,
-      'x-upload-offset':String(offset),'x-upload-final':end===file.size?'1':'0'
-   },body:piece});
-   videoStatus('Uploading video and sound… '+Math.floor(end/file.size*100)+'%',Math.floor(end/file.size*100));
+   let result=null,resumed=false,lastError=null;
+   for(let attempt=0;attempt<3;attempt++){
+    if(id!==videoUploadId)return;
+    try{
+     result=await apiJson('/api/video-chunk',{method:'POST',headers:{
+       'Content-Type':'application/octet-stream','x-upload-session':init.session,
+       'x-upload-offset':String(offset),'x-upload-final':end===file.size?'1':'0'
+     },body:piece});
+     break;
+    }catch(error){
+     lastError=error;
+     if(error.code==='RESUME_AT_OFFSET'&&Number.isInteger(error.received)&&error.received>=0&&error.received<=file.size){
+      if(error.received===offset) { /* Retry the same chunk. */ }
+      else { offset=error.received;resumed=true;break; }
+     }
+     if(!resumed&&attempt<2&&(!error.status||[408,429,502,503,504].includes(error.status))){
+      videoStatus('Reconnecting… '+Math.floor(offset/file.size*100)+'%',Math.floor(offset/file.size*100));
+      await delay(900*(attempt+1));
+      continue;
+     }
+     if(!resumed)break;
+    }
+   }
+   if(resumed){
+    videoStatus('Resuming video transfer… '+Math.floor(offset/file.size*100)+'%',Math.floor(offset/file.size*100));
+    continue;
+   }
+   if(!result){
+    const message=lastError?.message||'Upload interrupted.';
+    throw Error('Transfer stopped at '+Math.floor(offset/file.size*100)+'%: '+message+
+      (lastError?.code?' ['+lastError.code+']':''));
+   }
    if(result.complete)finished=result.file;
+   if(result.received!==undefined&&result.received!==end)
+    throw Error('Video service confirmed an unexpected byte offset. Retry the upload.');
+   offset=end;
+   videoStatus('Uploading video and sound… '+Math.floor(offset/file.size*100)+'%',Math.floor(offset/file.size*100));
   }
   if(!finished?.name||!finished.uri)throw Error('The video did not finish uploading.');
   const meta={uri:finished.uri,mimeType:finished.mimeType||mime,name:finished.name,label:(file.name||'Vehicle video').slice(0,100),uploadedAt:Date.now(),duration:duration===null?null:Math.round(duration)};
@@ -284,7 +321,7 @@ async function attachVideo(file){
  }catch(e){
   if(id!==videoUploadId)return;
   pendingVideo=null;videoStatus('Upload failed: '+(e.message||'Try a shorter clip.'),0);
-  notify('Video upload failed. See the attachment message.');
+  notify('Video transfer stopped. The attachment shows the reason and progress.');
  }finally{
   if(id===videoUploadId){videoUploading=false;$('sendButton').disabled=pending;$('videoButton').disabled=false;}
  }
