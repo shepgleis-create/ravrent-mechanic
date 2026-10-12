@@ -42,17 +42,20 @@
    <div class="active-vehicle"><span id="activeVehicleLabel">No vehicle selected</span><button id="vehicleButton">Manage garage</button></div>
    <div class="compose-box">
     <div class="photo-preview hide" id="photoPreview"><img alt="Attached photo" id="photoThumbnail"><span>Vehicle photo attached</span><button id="removePhoto" aria-label="Remove photo">×</button></div>
+    <div class="video-preview hide" id="videoPreview"><span class="video-icon">▶</span><div class="video-details"><strong id="videoFileName">Vehicle video</strong><span id="videoUploadStatus">Preparing video…</span><progress id="videoProgress" value="0" max="100"></progress></div><button type="button" id="removeVideo" aria-label="Remove video">×</button></div>
     <textarea rows="1" id="messageInput" placeholder="Ask anything about a car problem…" aria-label="Ask Ravrent Mechanic" maxlength="3200"></textarea>
     <div class="compose-actions">
      <div class="compose-left">
       <button class="icon-btn" id="photoButton" aria-label="Attach vehicle photo" title="Attach photo" style="width:35px;height:35px"><svg class="svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.4"/><path d="m4 17 5-5 4 4 3-3 4 4"/></svg></button>
       <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      <button class="icon-btn video-action" type="button" id="videoButton" aria-label="Attach video with sound" title="Upload vehicle video" style="width:35px;height:35px"><svg class="svg" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg></button>
+      <input id="videoInput" type="file" accept="video/mp4,video/quicktime,video/mov,video/webm,.mov,.mp4,.webm" hidden>
       <button class="mode-switch active" id="deepToggle" aria-pressed="true" title="Higher reasoning depth"><svg class="svg" viewBox="0 0 24 24"><path d="m12 2 2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/></svg> Think deeper</button>
       <button class="mode-switch active" id="webToggle" aria-pressed="true" title="Request web source research"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18"/></svg> Web research</button>
      </div>
      <button class="send-btn" id="sendButton" aria-label="Send message"><svg class="svg" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
     </div></div>
-   <div class="composer-foot">AI can make mistakes. Verify repair procedures and safety-critical diagnoses with qualified service information. <button id="saveReport" style="border:0;background:none;color:#666;text-decoration:underline;cursor:pointer">Save report</button></div>
+   <div class="composer-foot">Video clips up to 32 MB, including audio, can be analyzed. Uploaded videos are processed by an external AI service and retained temporarily. AI can make mistakes. Verify repair procedures and safety-critical diagnoses with qualified service information. <button id="saveReport" style="border:0;background:none;color:#666;text-decoration:underline;cursor:pointer">Save report</button></div>
   </div></div>
  </section>
  <section id="garagePane" class="section-content hide"><div class="section-inner">
