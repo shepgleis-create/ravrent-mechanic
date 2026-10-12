@@ -1,51 +1,43 @@
-# Ravrent Mechanic
+# Ravrent Mechanic V2 — Automotive AI Diagnostics
 
-Mobile-first automotive troubleshooting assistant for Ravrent Interactive.
+Chat-first, mobile-responsive mechanic research assistant by Ravrent Interactive.
 
-## Live AI provider: Google Gemini
+## New in V2
+- Gemini 3.8 Flash with optional high reasoning effort and Google Search grounding
+- Verifiable source links when Google actually uses search; no fabricated research
+- Proper API and quota errors rather than silent fallback to repeated canned replies
+- Separate chat threads, multiple garage vehicles, mileage and maintenance history
+- Vehicle photo attachments for visible problems (no engine sound recognition)
+- OBD-II generic code library, exportable diagnostic reports
+- ChatGPT-style clean conversation interface with original Ravrent branding
 
-The app has two modes:
-- **Guided diagnostics**: offline rule-based explanations, without an API key.
-- **Google Gemini AI**: live, vehicle-aware conversational troubleshooting through `api/chat.js`.
+## Connect Gemini
 
-The AI endpoint supports multi-turn chat, vehicle context, and an optional inline photo in the last user message (the current browser interface has not yet added the photo-picker control).
+1. Create a Gemini key at https://aistudio.google.com/api-keys
+2. In Vercel, open ravrent-mechanic → Settings → Environment Variables. Add these server-only Secret values for Production:
+   - GEMINI_API_KEY = the actual Google AI Studio key
+   - MECHANIC_ACCESS_CODE = a separate long random password for private testing
+3. Optional GEMINI_MODEL = gemini-3.8-flash. That model is the default.
+4. Redeploy latest main branch after setting the secrets.
+5. Open the app and use the gear to enter only the private access code, never the Google API key.
+6. Enable both Think deeper and Web research for higher reasoning and Google Search grounding.
 
-### Configure Google Gemini on Vercel
+The top bar checks /api/status. It confirms that both environment variables are present, not that Google accepts the credentials. Send a test question to verify the live connection.
 
-1. Create your Google Gemini API key from https://aistudio.google.com/api-keys (Google AI Studio).
-2. Open Vercel → `ravrent-mechanic` → Settings → Environment Variables.
-3. Add the following **private** environment variables for Production:
-   - `GEMINI_API_KEY`: paste the secret from Google AI Studio.
-   - `MECHANIC_ACCESS_CODE`: create a long random access password for private testing.
-   - `GEMINI_MODEL` (optional): defaults to `gemini-3.8-flash`. For lower-cost use where available, choose `gemini-3.5-flash-lite`.
-4. Redeploy the Production deployment to load the changed configuration.
-5. Open the app, click **Connect Google Gemini**, enter **only your access code**, then send a diagnostic question.
+Google Search grounding can incur extra charges per search and high thinking consumes more tokens. Review the current billing and quota information at https://ai.google.dev/gemini-api/docs/pricing.
 
-**Never commit, share, or enter the Gemini API key in the browser.** `.env.example` contains *variable names only*. Keep actual secrets in Vercel. OpenAI configuration is not needed.
+## Project files
+- index.html: chat interface, navigation, modals
+- style.css: responsive styling
+- app.js: threads, diagnoses, garage, service notes, images, reports
+- api/chat.js: Gemini reasoning and grounded search with source attribution
+- api/status.js: no-secret configuration readiness endpoint
+- vercel.json: Vercel functions configuration
 
-### Current capabilities
+## Known limitations and safety
 
-- Responsive mobile-first interface
-- Multi-car My Garage with local browser storage
-- Guided diagnostics with safety triage and checks before replacing parts
-- Starter OBD-II trouble-code reference (generic definitions, not a scanner)
-- Saved diagnostic reports with text downloads
-- Optional protected Gemini conversational API
+This is a private beta, not a public production AI service. Shared access codes and per-instance rate limiting do not replace account authentication and distributed quotas. Add user authentication, data storage, quotas, spend controls and abuse protection before opening this to the public.
 
-### Current limitations
+Conversations, garage entries and service logs currently live in browser localStorage; they are not cross-device or cloud-synced. Deleting site data loses them. Photo upload works for visual questions; actual OBD-II device scanning, live telemetry, sound analysis, licensed manuals and mechanic booking are not implemented. Google Search is optional and Gemini may return no results.
 
-- Garage entries and report history remain in local browser storage, not synchronized to user accounts.
-- No direct Bluetooth OBD scanner, live vehicle telemetry, recall lookup, licensed service manual data, automatic engine sound analysis, or mechanic directory yet.
-- Photo support is prepared server-side only; frontend photo uploads are not yet implemented.
-- Private-testing access code is **not public authentication**. Add proper user login, shared database, persistent distributed rate limits, per-account usage quota, cost monitoring, and abuse controls before publicly opening AI chat.
-- Current rate limiting is only per running serverless instance; it is not a production abuse control.
-- Diagnoses are suggestions, never proof. Use verified service info and professional inspection for important repairs or safety-critical systems.
-
-## Architecture
-
-- `index.html`: mobile UI, client-side state, rule-based guided mode.
-- `api/chat.js`: Vercel Node serverless handler using the Google Gemini `generateContent` API.
-- `vercel.json`: Vercel function configuration.
-- `.env.example`: example keys, with no actual secrets.
-
-Git pushes to `main` should deploy automatically *if* the Vercel project is properly Git-linked and has deployment permissions.
+AI diagnostics are hypotheses, not a physical inspection. Never drive a vehicle with unsafe steering or brakes, overheating, smoke or fuel leakage. Check manufacturer repair specifications and use qualified professional help when appropriate. Never commit secrets to GitHub or frontend files.
