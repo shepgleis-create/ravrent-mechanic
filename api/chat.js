@@ -96,6 +96,7 @@ module.exports=async function handler(req,res){
   // but do NOT replace production account authentication and distributed rate limits.
   const origin=req.headers?.origin,host=req.headers?.host;
   if(origin&&host){try{if(new URL(origin).host!==host)return res.status(403).json({error:'This request must come from the app.',code:'ORIGIN'});}catch{ return res.status(403).json({error:'Invalid request origin.',code:'ORIGIN'});}}
+  if(process.env.AI_REQUESTS_ENABLED==='false')return res.status(503).json({error:'AI chat is temporarily paused by the app owner. Offline guided diagnostics remain available.',code:'OWNER_PAUSED'});
   const key=process.env.GEMINI_API_KEY;
   if(!key)return res.status(503).json({error:'The assistant is not set up yet. The app owner needs to finish server configuration.',code:'NOT_CONFIGURED'});
   const remote=asText(req.headers?.['x-forwarded-for']||req.socket?.remoteAddress||'unknown',100).split(',')[0];
