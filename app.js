@@ -28,7 +28,7 @@ function renderNav(){
  const t=current();$('threadList').innerHTML=[...data.threads].sort((a,b)=>b.updated-a.updated).map(x=>
  '<div class="thread-row'+(x.id===t?.id?' active':'')+'"><button data-thread="'+esc(x.id)+'" title="'+esc(x.title)+'">'+esc(x.title||'New conversation')+'</button><button class="delete-thread" data-del="'+esc(x.id)+'" aria-label="Delete conversation">×</button></div>').join('');
  document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
- $('titleTop').textContent=view==='diagnose'?'Ravrent Mechanic':view==='garage'?'My Garage':view==='codes'?'Trouble Codes':'Diagnostic Reports';
+ $('titleTop').textContent=({diagnose:'Ravrent Mechanic',garage:'My Garage',codes:'Trouble Codes',reports:'Saved Reports',wizard:'Guided Diagnostics',health:'App Diagnostics'})[view]||'Ravrent Mechanic';
  $('threadList').querySelectorAll('[data-thread]').forEach(b=>b.onclick=()=>{data.currentId=b.dataset.thread;store();setView('diagnose');});
  $('threadList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
  if(!confirm('Delete this conversation from this browser?'))return;
@@ -181,7 +181,7 @@ function saveReport(){
 function render(){
  if(view==='diagnose')ensureThread();
  renderNav();$('chatPane').classList.toggle('hide',view!=='diagnose');
- $('garagePane').classList.toggle('hide',view!=='garage');$('codesPane').classList.toggle('hide',view!=='codes');$('reportsPane').classList.toggle('hide',view!=='reports');
+ $('garagePane').classList.toggle('hide',view!=='garage');$('codesPane').classList.toggle('hide',view!=='codes');$('reportsPane').classList.toggle('hide',view!=='reports');$('wizardPane').classList.toggle('hide',view!=='wizard');$('healthPane').classList.toggle('hide',view!=='health');
  if(view==='diagnose')renderChat();if(view==='garage')renderGarage();if(view==='codes')lookup();if(view==='reports')renderReports();
 }
 async function status(){
@@ -361,5 +361,12 @@ $('serviceForm').onsubmit=e=>{
 };
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
 document.querySelectorAll('.modal-back').forEach(m=>m.onclick=e=>{if(e.target===m)close(m.id);});
+window.RavrentApp={
+ addGuidedReport(report){
+  if(!report||typeof report!=='object'||!report.id||!Array.isArray(report.messages))return false;
+  data.reports.push(report);store();return true;
+ },
+ openChatWithQuestion(question){setView('diagnose');$('messageInput').value=String(question||'').slice(0,3200);$('messageInput').focus();}
+};
 render();status();
 })();
