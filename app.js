@@ -93,8 +93,10 @@ async function send(text,isRetry){
  pendingPhoto='';$('photoPreview').classList.add('hide');$('photoInput').value='';$('messageInput').value='';t.updated=Date.now();
  store();renderNav();renderChat();busy(true);
  try{
-  const messages=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(-18).map(m=>({
-   role:m.role,text:m.text,...(m.image?{image:m.image}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
+  const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(-18);
+  const lastImage=selected.findLastIndex(m=>m.role==='user'&&m.image);
+  const messages=selected.map((m,i)=>({
+   role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json','x-app-passcode':passcode},
    body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep!==false,research:data.research!==false})});
@@ -179,6 +181,7 @@ function saveReport(){
  store();notify('Report saved to Reports.');
 }
 function render(){
+ if(view==='diagnose')ensureThread();
  renderNav();$('chatPane').classList.toggle('hide',view!=='diagnose');
  $('garagePane').classList.toggle('hide',view!=='garage');$('codesPane').classList.toggle('hide',view!=='codes');$('reportsPane').classList.toggle('hide',view!=='reports');
  if(view==='diagnose')renderChat();if(view==='garage')renderGarage();if(view==='codes')lookup();if(view==='reports')renderReports();
