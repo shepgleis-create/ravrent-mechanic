@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ravrent-mechanic.vercel.app/sitemap.xml
