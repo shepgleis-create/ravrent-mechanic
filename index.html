@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#ffffff">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0c0f13"><meta name="color-scheme" content="dark">
 <title>Ravrent Mechanic — Automotive AI</title><meta name="description" content="AI-powered automotive troubleshooting, vehicle research, diagnostic conversations and repair history.">
 <link rel="stylesheet" href="/style.css"></head><body>
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -14,21 +14,21 @@
  <button class="side-button" data-view="reports"><svg class="svg" viewBox="0 0 24 24"><path d="M6 3h11l3 3v15H6zM16 3v4h4M9 12h8M9 16h8"/></svg> Saved Reports</button>
  <div class="side-section-title">RECENT CONVERSATIONS</div>
  <div class="thread-list" id="threadList"></div>
- <div class="side-footer"><div class="foot-label">Powered by Google Gemini</div><div class="foot-sub">Deep diagnostics · Source-backed research</div><div class="foot-sub" style="margin-top:12px">Private beta. Not a substitute for a professional safety inspection.</div></div>
+ <div class="side-footer"><div class="foot-label">Integrated Automotive Intelligence</div><div class="foot-sub">Deep diagnostics · Source-backed research</div><div class="foot-sub" style="margin-top:12px">Private beta. Not a substitute for a professional safety inspection.</div></div>
 </aside>
 <div class="main">
  <header class="topbar"><div class="left-top">
  <button class="icon-btn mobile-menu" id="menuToggle" aria-label="Open menu"><svg class="svg" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
  <span class="wordmark" id="titleTop">Ravrent Mechanic</span><span class="beta">BETA</span></div>
- <div class="right-top"><button class="connection warning" id="connection" title="View Gemini connection settings">Checking connection</button>
- <button class="icon-btn" id="settingsButton" aria-label="Gemini settings" title="Gemini settings"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
+ <div class="right-top"><button class="connection warning" id="connection" title="Assistant status" disabled>Checking status</button>
+ <button class="icon-btn" id="settingsButton" aria-label="About Ravrent Mechanic" title="About Ravrent Mechanic"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
  <button class="icon-btn" id="newChatTop" aria-label="New chat" title="New chat"><svg class="svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div></header>
  <main class="workspace">
  <section id="chatPane" class="workspace">
   <div class="chat-scroll" id="chatScroll"><div class="chat-inner">
    <div class="welcome" id="welcome"><div class="welcome-icon"><svg class="svg" viewBox="0 0 24 24"><path d="m12 2 2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/></svg></div>
     <h1>What can I help you diagnose?</h1>
-    <p>Ask anything about your vehicle. Gemini examines the symptoms, compares possible causes and can research technical sources before recommending what to test.</p>
+    <p>Ask anything about your vehicle. The assistant examines the symptoms, compares possible causes and can research technical sources before recommending what to test.</p>
     <div class="suggestions">
      <button class="suggestion" data-suggestion="My engine rattles for two seconds on cold starts. What could cause it, and what should I test before replacing parts?">Cold-start engine rattle</button>
      <button class="suggestion" data-suggestion="Help me understand a check-engine light. Ask me the most important questions to narrow down the issue.">Check-engine light</button>
@@ -48,7 +48,7 @@
       <button class="icon-btn" id="photoButton" aria-label="Attach vehicle photo" title="Attach photo" style="width:35px;height:35px"><svg class="svg" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8" cy="9" r="1.4"/><path d="m4 17 5-5 4 4 3-3 4 4"/></svg></button>
       <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
       <button class="mode-switch active" id="deepToggle" aria-pressed="true" title="Higher reasoning depth"><svg class="svg" viewBox="0 0 24 24"><path d="m12 2 2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/></svg> Think deeper</button>
-      <button class="mode-switch active" id="webToggle" aria-pressed="true" title="Request source-backed Google Search grounding"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18"/></svg> Web research</button>
+      <button class="mode-switch active" id="webToggle" aria-pressed="true" title="Request web source research"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-5 5-5 13 0 18M12 3c5 5 5 13 0 18"/></svg> Web research</button>
      </div>
      <button class="send-btn" id="sendButton" aria-label="Send message"><svg class="svg" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
     </div></div>
@@ -61,7 +61,7 @@
   <div class="callout">Saved locally on this device for now. Real cross-device accounts and secure cloud storage are separate future features.</div>
  </div></section>
  <section id="codesPane" class="section-content hide"><div class="section-inner">
-  <div class="section-header"><div><h1>Trouble Code Research</h1><p>Understand fault codes, then investigate causes with Gemini and Google Search.</p></div></div>
+  <div class="section-header"><div><h1>Trouble Code Research</h1><p>Understand fault codes, then investigate causes with the integrated assistant.</p></div></div>
   <div class="code-search"><input class="field" id="codeInput" autocapitalize="characters" maxlength="8" placeholder="P0348, P0171, P0300…" aria-label="Diagnostic trouble code"><button class="primary-btn" id="codeLookup">Look up</button></div>
   <div id="codeResult" class="result">Enter a five-character code to get started.</div>
   <div class="callout">A DTC points to a detected problem or circuit condition, not necessarily to a failed component. There is no live OBD-II scanner connected.</div>
@@ -69,12 +69,13 @@
  <section id="reportsPane" class="section-content hide"><div class="section-inner"><div class="section-header"><div><h1>Saved Reports</h1><p>Keep exportable histories of diagnostic conversations and source research.</p></div></div><div id="reportGrid" class="item-grid"></div></div></section>
  </main>
 </div></div>
-<div class="modal-back" id="aiModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="aiTitle"><h2 id="aiTitle">Connect Google Gemini</h2>
- <p>Live AI is accessed through the protected server. Add GEMINI_API_KEY and MECHANIC_ACCESS_CODE to your private Vercel environment variables, then redeploy. Never enter your Google key here.</p>
- <form id="aiForm"><label>Private testing access code<input id="accessCode" type="password" class="field" placeholder="Enter your access code" autocomplete="off" required></label>
- <p>Enter the MECHANIC_ACCESS_CODE you configured in Vercel, not the Gemini API key. Private testing only; public user accounts and spending limits are not implemented yet.</p>
- <div class="modal-actions"><button type="button" class="outline-btn" data-close="aiModal">Cancel</button><button type="submit" class="primary-btn">Connect</button></div></form>
- </div></div>
+<div class="modal-back" id="aiModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+<h2 id="aiTitle">About Ravrent Mechanic</h2>
+<p>The automotive assistant is integrated into this app. Describe a problem and choose a vehicle for more relevant diagnostic guidance—no separate AI connection is required.</p>
+<p>Think deeper compares possible causes and verification tests. Web research looks for external technical sources when available. The app will tell you if external research could not run.</p>
+<p>Vehicle profiles and conversations remain in this browser. Advice from the assistant does not replace an in-person inspection.</p>
+<div class="modal-actions"><button type="button" class="primary-btn" data-close="aiModal">Close</button></div>
+</div></div>
 <div class="modal-back" id="vehicleModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="vehicleTitle"><h2 id="vehicleTitle">Add vehicle</h2><p>Save vehicle specifics to improve every new diagnosis.</p>
  <form id="vehicleForm"><div class="form-grid"><label>Year<input class="field" type="number" name="year" min="1950" max="2030" placeholder="2009" required></label><label>Mileage<input class="field" type="number" name="miles" min="0" placeholder="158000"></label></div>
  <label>Make<input class="field" name="make" placeholder="Lexus" maxlength="40" required></label>
@@ -82,7 +83,7 @@
  <label>Engine / trim<input class="field" name="engine" placeholder="2.5L V6 · RWD automatic" maxlength="80"></label>
  <div class="modal-actions"><button type="button" class="outline-btn" data-close="vehicleModal">Cancel</button><button type="submit" class="primary-btn">Save vehicle</button></div></form>
  </div></div>
-<div class="modal-back" id="serviceModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="serviceTitle"><h2 id="serviceTitle">Record maintenance</h2><p>Service notes help Gemini understand previous repairs and avoid repeated recommendations.</p>
+<div class="modal-back" id="serviceModal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="serviceTitle"><h2 id="serviceTitle">Record maintenance</h2><p>Service notes help the assistant understand previous repairs and avoid repeated recommendations.</p>
  <form id="serviceForm"><input type="hidden" name="vehicleId" id="serviceVehicleId">
  <div class="form-grid"><label>Date<input class="field" type="date" name="date" required></label><label>Mileage<input class="field" type="number" name="miles" min="0" placeholder="158000"></label></div>
  <label>Work type<input class="field" name="type" maxlength="45" placeholder="Alternator replaced" required></label>
