@@ -33,3 +33,32 @@ Use scenario inputs rather than promises:
 Do not claim 'working video analysis' until a real video uploads, reaches ready state and receives an actual useful model answer on the live site.
 Do not claim subscriptions exist until checkout, webhook, entitlement, cancellation and refund handling are tested end-to-end.
 Do not activate public advertising until approval and policy review.
+
+## Nine additional revenue paths — October 12, 2026
+
+All are proposals; no checkout, marketplace or partner integrations are active.
+
+| Channel | Model | Important launch requirement |
+| --- | --- | --- |
+| One-time advanced diagnosis credits | Prepaid packs | Account-based balance, metering, refund and expiration disclosures |
+| Professional reports | Pay per formatted report | Verified report generation and clear non-certification language |
+| Repair-shop referrals | Disclosed lead or completed-booking commission | Verified shops, customer consent, transparent ranking |
+| Parts affiliate sales | Disclosed affiliate commission | Accurate vehicle fitment, non-affiliate alternatives |
+| Fleet management | Monthly per fleet or vehicle | Secure multi-vehicle dashboard, role permissions |
+| Workshop team seats | Per technician seat | Multi-tenant account security, access logs |
+| Automotive training | Course or bundle purchase | Original content and appropriate safety review |
+| Pre-purchase inspection kits | One-time checklist/report purchase | Explicitly not a substitute for in-person inspection |
+| B2B workflow API | Metered usage | Strong auth, quotas, customer contracts and privacy safeguards |
+
+The live `/pricing.html` page contains an interactive gross-revenue scenario calculator; it performs local arithmetic only and collects no payment or personal data.
+
+### Priority and guardrails
+1. Complete live diagnostic/video reliability testing.
+2. Build accounts, durable metering, AI usage ceilings and provider spend alerts.
+3. Launch optional one-time credits **before** more expensive unlimited subscription promises.
+4. Add paid plans with Stripe Checkout and verified webhook entitlements.
+5. Expand original free guide content for ad revenue only after AdSense approval.
+6. Add disclosed affiliate links and optional referral marketplace after accurate fitment and independent recommendations.
+7. Pilot B2B tools only after secure multi-tenant storage.
+
+Never gate emergency vehicle safety guidance behind a paywall, imply an AI diagnosis is a certified inspection, sell personal vehicle histories, or alter diagnosis ranking based on commissions.
