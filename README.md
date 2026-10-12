@@ -74,3 +74,7 @@ AI diagnostic advice is not an in-person inspection. Always verify measurements,
 - New core regression tests, plus a manually launched GitHub Actions **Verify live Ravrent Mechanic** workflow.
 
 **Important:** A GitHub commit is not a live Vercel verification. A successful real AI/video upload must be confirmed on the deployed site. Vercel project access is currently restricted for connected deployments/logs.
+
+## Emergency API spending controls
+
+Set `AI_REQUESTS_ENABLED=false` in Vercel production environment variables, then redeploy, to pause paid diagnostic AI requests without disabling the offline guided troubleshooting screens. Set `VIDEO_UPLOADS_ENABLED=false` and redeploy to pause new video uploads. Remove the settings or set them to `true` to resume. These switches are a manual safety measure, **not automatic dollar caps** or distributed rate limiting.
