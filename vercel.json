@@ -6,6 +6,15 @@
     },
     "api/status.js": {
       "maxDuration": 10
+    },
+    "api/video-start.js": {
+      "maxDuration": 20
+    },
+    "api/video-chunk.js": {
+      "maxDuration": 30
+    },
+    "api/video-status.js": {
+      "maxDuration": 20
     }
   }
 }
