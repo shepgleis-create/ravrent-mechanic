@@ -109,7 +109,7 @@ module.exports=async function handler(req,res){
   try{contents=conversation(body.messages);}
   catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':err.message==='INVALID_VIDEO'?'That video is unavailable or expired. Upload it again to continue.':'Conversation format is invalid.',code:'BAD_INPUT'});}
   const deep=body.deep===true,requestedResearch=body.research===true;
-  const model=deep?(process.env.GEMINI_MODEL||'gemini-3.8-flash'):(process.env.GEMINI_STANDARD_MODEL||'gemini-3.5-flash-lite');
+  const model=deep?(process.env.GEMINI_MODEL||'gemini-2.5-flash'):(process.env.GEMINI_STANDARD_MODEL||'gemini-2.5-flash-lite');
   if(!/^gemini-[a-z0-9.-]{3,48}$/.test(model))return res.status(503).json({error:'The assistant is not configured correctly.',code:'MODEL_CONFIG'});
   const prompt=system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle);
   const controller=new AbortController();
@@ -120,7 +120,7 @@ module.exports=async function handler(req,res){
       ...base,
       generationConfig:{
         maxOutputTokens:effort==='HIGH'?8500:effort==='MEDIUM'?5600:3600,
-        thinkingConfig:{thinkingLevel:effort,includeThoughts:false}
+        thinkingConfig:{thinkingBudget:effort==='HIGH'?2048:effort==='MEDIUM'?768:0,includeThoughts:false}
       },
       ...(grounded?{tools:[{google_search:{}}]}:{})
     };
@@ -155,15 +155,15 @@ module.exports=async function handler(req,res){
     }
     // If the main model's allowance is exhausted, try a separately provisioned,
     // lower-cost model once. No silent template responses.
-    if(result&&!result.ok&&result.status===429&&!controller.signal.aborted&&model!=='gemini-3.5-flash-lite'){
+    if(result&&!result.ok&&result.status===429&&!controller.signal.aborted&&model!=='gemini-2.5-flash-lite'){
       usedFallback=true;
-      result=await generate('gemini-3.5-flash-lite',false,'LOW');
+      result=await generate('gemini-2.5-flash-lite',false,'LOW');
     }
     if(!result?.ok){
       const status=result?.status||502;
       if(status===429)return res.status(503).json({error:'The assistant is at its current usage limit. Please try again later.',code:'AI_QUOTA'});
-      if(status===401||status===403)return res.status(503).json({error:'The assistant is temporarily unavailable due to a server authorization problem.',code:'AI_AUTH'});
-      if(status===404)return res.status(503).json({error:'The assistant is temporarily unavailable. Please contact the app owner.',code:'AI_MODEL'});
+      if(status===401||status===403)return res.status(503).json({error:'The AI service rejected the server credentials or this project does not have permission to use the selected model. The app owner must check the server key, API access and billing.',code:'AI_AUTH'});
+      if(status===404)return res.status(503).json({error:'The configured AI model is not available to this project. The app owner must update the model setting.',code:'AI_MODEL'});
       return res.status(503).json({error:'The assistant could not complete this request. Please try again.',code:'AI_REQUEST'});
     }
     const json=result.json,candidate=json.candidates?.[0];
