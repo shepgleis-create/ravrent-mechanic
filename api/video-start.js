@@ -1,4 +1,4 @@
-const video=require('./_video');
+const video=require('../lib/video');
 const starts=new Map();
 module.exports=async function handler(req,res){
  video.headers(res);
