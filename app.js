@@ -191,8 +191,8 @@ function render(){
 }
 async function status(){
  try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();
- $('connection').textContent=obj.paused?'AI temporarily paused':obj.configured?'AI setup found · test recommended':'Assistant unavailable';
- $('connection').classList.toggle('ready',!!obj.configured);$('connection').classList.toggle('warning',!obj.configured);
+ $('connection').textContent=obj.paused?'AI temporarily paused':obj.configured?'AI connection unverified':'Assistant unavailable';
+ $('connection').classList.toggle('ready',false);$('connection').classList.toggle('warning',true);
  }catch(e){$('connection').textContent='Check AI setup';$('connection').classList.add('warning');}
 }
 async function attach(file){
