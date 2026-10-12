@@ -149,3 +149,28 @@ input,select,textarea{color-scheme:dark}
 @media(max-width:650px){.wizard-panel{padding:16px}.wizard-topic{min-height:115px;padding:16px}.wizard-head{flex-wrap:wrap}}
 
 .vin-entry{display:flex;gap:9px;align-items:center}.vin-entry .field{flex:1;min-width:0}.vin-entry button{flex-shrink:0}.vin-status{font-size:11px;color:#9fb0bf;line-height:1.55;margin-top:4px}@media(max-width:440px){.vin-entry{flex-wrap:wrap}.vin-entry button{width:100%}}
+
+/* Mobile header and composer refinement — preserve the existing dark palette */
+.topbar{border-bottom:1px solid var(--border);min-height:64px}
+.left-top,.right-top{min-width:0}
+.wordmark{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.connection{max-width:165px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:center}
+.side-button{min-height:43px}
+.chat-inner{padding-bottom:36px}
+@media(max-width:650px){
+ .topbar{height:64px;min-height:64px;padding:0 13px;gap:7px}
+ .left-top{gap:6px;flex:1;min-width:0}
+ .right-top{gap:3px;flex-shrink:0}
+ .wordmark{font-size:15px;max-width:135px;line-height:1.2}
+ .beta{display:none}
+ .connection{max-width:95px;min-width:0;padding:7px 8px;font-size:10px;line-height:1.15;white-space:normal;text-align:center}
+ .connection:before{display:none}
+ .icon-btn{width:34px;height:36px}
+ .chat-inner{padding:20px 16px 30px}
+ .welcome{min-height:min(52vh,420px)}
+ .welcome h1{font-size:27px}
+ .welcome p{font-size:13px}
+ .suggestions{gap:7px}
+ .suggestion{font-size:12px}
+}
+@media(max-width:390px){.wordmark{max-width:105px;font-size:13px}.connection{max-width:78px;font-size:9px}.topbar{padding:0 8px}}
