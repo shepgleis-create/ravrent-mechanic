@@ -1,5 +1,7 @@
-'use strict';
-const {calculate,round}=require('./workshop-core');
+(function(root){'use strict';
+const workshop=typeof module!=='undefined'&&module.exports?require('./workshop-core'):root?.RavrentWorkshopCore;
+if(!workshop)throw Error('Estimate math unavailable');
+const {calculate,round}=workshop;
 const stages=['draft','quoted','approved','progress','completed'];
 function estimate(records,days=0,now=Date.now()){
  const list=(Array.isArray(records)?records:[]).filter(record=>record&&stages.includes(record.quoteStage));
@@ -47,4 +49,7 @@ function requiredLaborRate(input){
  const totalNeeded=round(overhead+targetProfit),laborContribution=round(Math.max(0,totalNeeded-partsGrossProfit)),requiredPerHour=round(laborContribution/billableHours),rate=round(requiredPerHour+laborCostPerHour);
  return {totalNeeded,partsGrossProfit:round(partsGrossProfit),laborContribution,requiredPerHour,rate,billableHours,laborCostPerHour}
 }
-module.exports={estimate,requiredLaborRate};
+const api={estimate,requiredLaborRate};
+if(typeof module!=='undefined'&&module.exports)module.exports=api;
+if(root)root.RavrentShopInsights=api;
+})(typeof window!=='undefined'?window:null);
