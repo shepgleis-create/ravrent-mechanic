@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
-const {classifyGoogleError}=require('../api/google-error');
+const {classifyGoogleError}=require('../lib/google-error');
 const at=(message,reason='')=>({error:{status:'PERMISSION_DENIED',message,details:reason?[{'@type':'type.googleapis.com/google.rpc.ErrorInfo',reason}]:[]}});
 test('Google project block is diagnosed without exposing provider identifiers',()=>{
  const detail=classifyGoogleError(403,at('Your project has been denied access. Please contact support. Project 123abc'));
