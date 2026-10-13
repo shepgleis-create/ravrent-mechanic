@@ -1,7 +1,7 @@
 // Ravrent Mechanic diagnostic research API (private beta).
 // No Gemini key is ever returned to the browser.
 const crypto = require('node:crypto');
-const {classifyGoogleError}=require('./google-error');
+const {classifyGoogleError}=require('../lib/google-error');
 const attempts = new Map();
 let searchPausedUntil = 0;
 const MAX_HISTORY = 14;
