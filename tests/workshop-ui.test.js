@@ -80,3 +80,20 @@ test('invalid or incomplete customer estimate cannot be saved',async()=>{
  assert.equal(a.saved().length,0);
  assert.match(a.get('quoteFeedback').textContent,/Shop name/);
 });
+
+test('shop service templates populate editable work without inventing prices or OEM labor times',async()=>{
+ const a=simulate();
+ await a.fire('createQuote');
+ const picker=a.get('templateSelect');
+ assert.ok(picker.children.some(o=>o.value==='built:oil-service'));
+ picker.value='built:oil-service';
+ await a.fire('applyTemplate');
+ const items=a.get('quoteLines').children;
+ assert.equal(items.length,3);
+ assert.match(items[0].querySelector('[data-field="description"]').value,/Oil and filter service labor/);
+ for(const row of items){
+  assert.equal(Number(row.querySelector('[data-field="unitPrice"]').value),0);
+  assert.equal(Number(row.querySelector('[data-field="internalCost"]').value),0);
+ }
+ assert.equal(a.get('customerTotal').textContent,'$0.00');
+});
