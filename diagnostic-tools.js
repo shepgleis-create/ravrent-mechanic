@@ -131,9 +131,9 @@ async function checkProvider(){
   if(!response.ok)throw Error(data.error||'HTTP '+response.status);
   if(data.status==='provider_access_ok'){
    const matching=data.standardModelListed&&data.deepModelListed;
-   out.textContent='Google accepted model listing. '+(matching?'Both configured models are listed.':'At least one configured model is not available.')+' Run Test AI connection to verify actual generation.';
+   out.textContent=(data.provider||'Google')+' accepted model listing. '+(matching?'Both configured models are listed.':'At least one configured model is not listed.')+' Run Test AI connection for a real answer.';
    let recentSuccess=false;try{const saved=JSON.parse(localStorage.getItem(aiStatusKey)||'null');recentSuccess=!!saved?.ok&&Number.isFinite(saved.time)&&Date.now()-saved.time<10*60*1000}catch{}
-   if(!recentSuccess)updateAIState(false,'UNVERIFIED','Google permits model listing, but a successful AI response has not been demonstrated.');
+   if(!recentSuccess)updateAIState(false,'UNVERIFIED',(data.provider||'AI provider')+' permits model listing, but a real AI answer has not been verified.');
   }else{
    const message=data.message||'Provider access failed.';
    out.textContent=(data.code||'PROVIDER')+': '+message;
