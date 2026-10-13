@@ -3,6 +3,7 @@
 const crypto = require('node:crypto');
 const {classifyGoogleError}=require('../lib/google-error');
 const {callGroq}=require('../lib/groq-provider');
+const {callTogether}=require('../lib/together-provider');
 const meter=require('../lib/usage-meter');
 const attempts = new Map();
 let searchPausedUntil = 0;
@@ -108,10 +109,13 @@ module.exports=async function handler(req,res){
   if(process.env.AI_REQUESTS_ENABLED==='false')return res.status(503).json({error:'AI chat is temporarily paused by the app owner. Offline guided diagnostics remain available.',code:'OWNER_PAUSED'});
   const key=String(process.env.GEMINI_API_KEY||'').trim();
   const groqKey=String(process.env.GROQ_API_KEY||'').trim();
+  const togetherKey=String(process.env.TOGETHER_API_KEY||'').trim();
   const preference=String(process.env.AI_PROVIDER||'auto').trim().toLowerCase();
-  const useGroq=preference==='groq'||(preference!=='gemini'&&Boolean(groqKey));
+  const useTogether=preference==='together'||(preference==='auto'&&!groqKey&&Boolean(togetherKey));
+  const useGroq=!useTogether&&(preference==='groq'||(preference!=='gemini'&&Boolean(groqKey)));
   if(useGroq&&!groqKey)return res.status(503).json({error:'GroqCloud is selected but GROQ_API_KEY is not configured on the server.',code:'NOT_CONFIGURED'});
-  if(!useGroq&&!key)return res.status(503).json({error:'No AI provider is configured yet. Add GROQ_API_KEY to switch to open-weight models, or configure Gemini.',code:'NOT_CONFIGURED'});
+  if(useTogether&&!togetherKey)return res.status(503).json({error:'Together AI is selected but TOGETHER_API_KEY is missing.',code:'NOT_CONFIGURED'});
+  if(!useGroq&&!useTogether&&!key)return res.status(503).json({error:'No AI provider is configured yet. Add GROQ_API_KEY to switch to open-weight models, or configure Gemini.',code:'NOT_CONFIGURED'});
   const remote=asText(req.headers?.['x-forwarded-for']||req.socket?.remoteAddress||'unknown',100).split(',')[0];
   if(!takeSlot(remote))return res.status(429).json({error:'Too many requests right now. Please wait before trying again.',code:'LOCAL_LIMIT'});
   const body=req.body&&typeof req.body==='object'?req.body:{};
@@ -130,6 +134,20 @@ module.exports=async function handler(req,res){
     return res.status(429).json({code:'APP_USAGE_LIMIT',error:reservation.scope==='day'?'This beta device/network reached its daily AI allowance. New conversations do not reset it.':'Too many AI requests in a minute. Please wait before trying again.',retryAfterSeconds:reservation.retryAfterSeconds,limitScope:reservation.scope});
   }
   const releaseReservation=()=>meter.release({reservation,fetcher:fetch});
+  if(useTogether){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),53000);
+    try{
+      const response=await callTogether({key:togetherKey,contents,
+        vehiclePrompt:system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle),
+        deep,requestedResearch,signal:controller.signal,fetcher:fetch,
+        model:process.env.TOGETHER_MODEL||'Qwen/Qwen3.8-Flash'
+      });
+      if(!response.ok){await releaseReservation();if(response.retryAfterSeconds)res.setHeader('Retry-After',String(response.retryAfterSeconds));
+        return res.status(response.status===400?400:response.status===429?429:503).json({error:response.message,code:response.code,retryAfterSeconds:response.retryAfterSeconds||null,provider:'Together AI'})}
+      return res.status(200).json({...response,usageLimit:reservation.active?{scope:'anonymous_beta',remainingToday:Math.max(0,reservation.limitToday-reservation.usedToday)}:null});
+    }catch(e){await releaseReservation();return res.status(503).json({error:'Together AI request failed. Check provider connectivity.',code:controller.signal.aborted?'TIMEOUT':'TOGETHER_NETWORK'})}
+    finally{clearTimeout(timer)}
+  }
   if(useGroq){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),53000);
     try{
@@ -147,6 +165,15 @@ module.exports=async function handler(req,res){
         standardModel:process.env.GROQ_TEXT_MODEL||'qwen/qwen3.8-27b',
         visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'
       });
+      if(!reply.ok&&reply.status===429&&togetherKey&&process.env.AI_PAID_FALLBACK_ENABLED==='true'){
+        try{
+          const fallback=await callTogether({key:togetherKey,contents,
+            vehiclePrompt:system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle),
+            deep,requestedResearch,signal:controller.signal,fetcher:fetch,
+            model:process.env.TOGETHER_MODEL||'Qwen/Qwen3.8-Flash'});
+          if(fallback.ok)return res.status(200).json({...fallback,usedFallback:true,usageLimit:reservation.active?{scope:'anonymous_beta',remainingToday:Math.max(0,reservation.limitToday-reservation.usedToday)}:null});
+        }catch{}
+      }
       if(!reply.ok){
         await releaseReservation();
         if(reply.retryAfterSeconds)res.setHeader('Retry-After',String(reply.retryAfterSeconds));
