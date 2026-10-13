@@ -4,10 +4,11 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'..','api','provider-check.js'),'utf8');
+const googleError=require('../api/google-error');
 const request=ip=>({method:'GET',headers:{'x-forwarded-for':ip},query:{}});
 const result=()=>({code:200,body:null,setHeader(){},status(code){this.code=code;return this},json(value){this.body=value;return this}});
 function build(key,fetcher){
- const context={module:{exports:{}},process:{env:key?{GEMINI_API_KEY:'  '+key+'  '}:{}},fetch:fetcher,
+ const context={module:{exports:{}},require:name=>name==='./google-error'?googleError:{},process:{env:key?{GEMINI_API_KEY:'  '+key+'  '}:{}},fetch:fetcher,
   AbortController:class{constructor(){this.signal={aborted:false}}abort(){this.signal.aborted=true}},
   setTimeout:()=>1,clearTimeout:()=>{}};
  vm.runInNewContext(source,context);
@@ -26,7 +27,7 @@ test('invalid Google AI key is diagnosed without leaking a credential',async()=>
  });
  const r=result();await handler(request('198.51.100.202'),r);
  assert.equal(sentKey,'not-a-real-key');
- assert.equal(r.body.code,'GOOGLE_KEY_INVALID');
+ assert.equal(r.body.code,'AI_KEY_INVALID');
  assert.equal(r.body.status,'failed');
  assert.ok(!JSON.stringify(r.body).includes('not-a-real-key'))
 });
