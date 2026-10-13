@@ -64,7 +64,7 @@ function markdown(s){
 }
 function messageHtml(m,i){
  if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+(m.video?'<div class="video-pill"><span>▶</span> Video with sound · '+esc(m.video.label||'Vehicle recording')+'</div>':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
- if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>The assistant could not complete this request.</strong> '+esc(/gemini|google/i.test(m.text||'')?'The previous request reached its usage limit. Retry using the updated assistant.':m.text)+'<div><button data-retry="'+i+'">Retry question</button></div></div></div>';
+ if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>AI provider unavailable</strong><p>'+esc(m.text||'The service is not responding.')+'</p><div><button data-open-health="1">Connection details</button><button data-open-wizard="1">Use guided diagnostics</button><button data-retry="'+i+'">Retry</button></div></div></div>';
  let sources=Array.isArray(m.sources)?m.sources.filter(s=>s?.url&&/^https:\/\//.test(s.url)):[];
  const links=sources.length?'<div class="sources">'+sources.map(s=>'<a class="source" target="_blank" rel="noopener noreferrer" href="'+esc(s.url)+'">'+svg('globe',true)+esc(s.title||'Reference source')+'</a>').join('')+'</div>':'';
  const research=m.researchRequested?(m.researchPerformed?'Web research used'+(sources.length?' · '+sources.length+' references':''):'No verified web sources returned'):'Web research not requested';
@@ -74,6 +74,8 @@ function renderChat(){
  const t=ensureThread();$('welcome').classList.toggle('hide',!!t.messages.length);
  $('chatList').innerHTML=t.messages.map(messageHtml).join('');
  $('chatList').querySelectorAll('[data-retry]').forEach(b=>b.onclick=()=>retry(Number(b.dataset.retry)));
+ $('chatList').querySelectorAll('[data-open-health]').forEach(b=>b.onclick=()=>setView('health'));
+ $('chatList').querySelectorAll('[data-open-wizard]').forEach(b=>b.onclick=()=>setView('wizard'));
  $('activeVehicleLabel').textContent=carName(carFor(t));
  for(const [name,active] of [['deep',data.deep===true],['web',data.research===true]]){
   const b=$(name+'Toggle');b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
@@ -97,21 +99,27 @@ async function send(text,isRetry){
  pendingPhoto='';pendingVideo=null;$('photoPreview').classList.add('hide');$('photoInput').value='';$('videoPreview').classList.add('hide');$('videoInput').value='';$('messageInput').value='';t.updated=Date.now();
  store();renderNav();renderChat();busy(true);
  try{
-  const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(-18);
+  const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(data.deep===true?-14:-9);
   const lastImage=selected.findLastIndex(m=>m.role==='user'&&m.image);
+  const lastVideo=selected.findLastIndex(m=>m.role==='user'&&m.video);
   const messages=selected.map((m,i)=>({
-   role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.video?{video:m.video}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
+   role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.video&&i===lastVideo?{video:m.video}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
    body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep===true,research:data.research===true})});
   let result={};try{result=await response.json();}catch(e){}
-  if(!response.ok||!result.reply){let error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;throw error;}
+  if(!response.ok||!result.reply){let error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;error.code=result.code||'AI_REQUEST';throw error;}
+  try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:true,code:'CONNECTED',message:'Google returned a real AI response.',time:Date.now()}))}catch{}
+  if($('connection')){$('connection').textContent='AI connected';$('connection').classList.add('ready');$('connection').classList.remove('warning')}
   t.messages.push({role:'assistant',text:result.reply,mode:result.mode||'AI response',
    sources:result.sources||[],researchRequested:result.researchRequested,researchPerformed:result.researchPerformed,researchNote:result.researchNote||null,
    modelParts:result.modelParts||null,at:Date.now()});
  }catch(e){
   const reason=e.message||'The assistant is unavailable right now. Please try again soon.';
-  t.messages.push({role:'error',text:reason,at:Date.now()});
+  const code=e.code||'AI_NETWORK';
+  try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:false,code,message:reason,time:Date.now()}))}catch{}
+  if($('connection')){$('connection').textContent='AI offline';$('connection').classList.remove('ready');$('connection').classList.add('warning')}
+  t.messages.push({role:'error',text:reason,code,at:Date.now()});
  }finally{t.updated=Date.now();busy(false);store();renderNav();renderChat();}
 }
 function retry(i){
@@ -190,10 +198,20 @@ function render(){
  if(view==='diagnose')renderChat();if(view==='garage')renderGarage();if(view==='codes')lookup();if(view==='reports')renderReports();
 }
 async function status(){
- try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error();const obj=await r.json();
- $('connection').textContent=obj.paused?'AI temporarily paused':obj.configured?'AI connection unverified':'Assistant unavailable';
- $('connection').classList.toggle('ready',false);$('connection').classList.toggle('warning',true);
- }catch(e){$('connection').textContent='Check AI setup';$('connection').classList.add('warning');}
+ const control=$('connection');if(!control)return;
+ let previous=null;try{previous=JSON.parse(localStorage.getItem('ravrent_ai_last_status')||'null')}catch{}
+ const recent=previous&&Number.isFinite(previous.time)&&Date.now()-previous.time<12*60*60*1000;
+ try{
+  const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)throw Error('Unavailable');
+  const cfg=await response.json();
+  const label=cfg.paused?'AI paused':!cfg.configured?'AI not configured':recent?(previous.ok?'AI recently tested':'AI offline'):'AI not tested';
+  control.textContent=label;
+  control.classList.toggle('ready',Boolean(recent&&previous.ok&&!cfg.paused&&cfg.configured));
+  control.classList.toggle('warning',!(recent&&previous.ok&&!cfg.paused&&cfg.configured))
+ }catch{
+  control.textContent=recent?(previous.ok?'AI last tested':'AI offline'):'AI status unknown';
+  control.classList.remove('ready');control.classList.add('warning');
+ }
 }
 async function attach(file){
  if(!file||!/^image\/(jpeg|png|webp)$/.test(file.type)){notify('Choose a JPEG, PNG, or WebP photo.');return;}
@@ -337,6 +355,7 @@ $('sidebarOverlay').onclick=closeSidebar;
 $('newThread').onclick=newChat;$('newChatTop').onclick=newChat;
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
 $('settingsButton').onclick=()=>modal('aiModal');
+$('connection').onclick=()=>setView('health');
 $('vehicleButton').onclick=()=>setView('garage');
 $('addVehicle').onclick=()=>{$('vehicleForm').reset();modal('vehicleModal');};
 $('saveReport').onclick=saveReport;
