@@ -58,7 +58,7 @@ function render(){
   const edit=el('button','','Open worksheet');edit.type='button';edit.onclick=()=>open(v.id);
   const vin=el('a','','Vehicle research');vin.href='/vin-report.html'+(v.vin?'?vin='+encodeURIComponent(v.vin):'');
   const report=el('button','','Print report');report.type='button';report.onclick=()=>printReportFor(v);
-  right.append(edit,report,vin);card.append(left,right);host.append(card)
+  const quote=el('button','','Estimate');quote.type='button';quote.onclick=()=>{try{sessionStorage.setItem('ravrent_workshop_intake_v1',JSON.stringify({vehicle:label(v).slice(0,160),vin:v.vin||''}));location.href='/workshop.html'}catch{$('inventoryHint').textContent='Could not hand off vehicle. Open Workshop Estimates from the navigation.'}};right.append(edit,quote,report,vin);card.append(left,right);host.append(card)
  }
 }
 function getForm(){
