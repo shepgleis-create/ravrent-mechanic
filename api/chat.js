@@ -3,6 +3,7 @@
 const crypto = require('node:crypto');
 const {classifyGoogleError}=require('../lib/google-error');
 const {callGroq}=require('../lib/groq-provider');
+const meter=require('../lib/usage-meter');
 const attempts = new Map();
 let searchPausedUntil = 0;
 const MAX_HISTORY = 14;
@@ -12,7 +13,7 @@ function takeSlot(id) {
  if(now-row.dayStart>day){row.dayStart=now;row.daily=0;}
  row.n++;row.daily++;attempts.set(id,row);
  if(attempts.size>400){for(const [k,v] of attempts)if(now-v.dayStart>day)attempts.delete(k);}
- return row.n<=4&&row.daily<=30;
+ return row.n<=8&&row.daily<=50;
 }
 const asText = (v,max=250)=>typeof v==='string'?v.slice(0,max):typeof v==='number'?String(v).slice(0,max):'';
 function vehicleContext(v) {
@@ -106,19 +107,41 @@ module.exports=async function handler(req,res){
   try{contents=conversation(body.messages,body.deep===true);}
   catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':err.message==='INVALID_VIDEO'?'That video is unavailable or expired. Upload it again to continue.':'Conversation format is invalid.',code:'BAD_INPUT'});}
   const deep=body.deep===true,requestedResearch=body.research===true;
+  let reservation=null;
+  try{reservation=await meter.reserve({remote,fetcher:fetch})}
+  catch{ return res.status(503).json({code:'USAGE_METER_UNAVAILABLE',error:'The usage service is temporarily unavailable. No AI credit was used. Try again later.'}) }
+  if(reservation.active&&!reservation.allowed){
+    res.setHeader('Retry-After',String(reservation.retryAfterSeconds));
+    return res.status(429).json({code:'APP_USAGE_LIMIT',error:reservation.scope==='day'?'This beta device/network reached its daily AI allowance. New conversations do not reset it.':'Too many AI requests in a minute. Please wait before trying again.',retryAfterSeconds:reservation.retryAfterSeconds,limitScope:reservation.scope});
+  }
+  const releaseReservation=()=>meter.release({reservation,fetcher:fetch});
   if(useGroq){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),53000);
     try{
       const reply=await callGroq({
         key:groqKey,contents,
-        vehiclePrompt:system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle),
+        vehiclePrompt:[
+          'Ravrent Mechanic: provide evidence-based vehicle diagnostics; keep replies useful and focused.',
+          'Treat codes as clues, never proof of a defective component. Rank 2-3 causes and give the cheapest safe next test.',
+          'Separate observed facts from guesses. When vehicle data or measurements are missing, ask only needed follow-ups.',
+          'Warn about flashing CEL, unsafe brakes/steering, overheating, fuel leaks and other urgent safety hazards.',
+          'Do not invent recalls, repairs, tested measurements, current sources, part fitment, or pricing.',
+          'Vehicle: '+vehicleContext(body.vehicle).slice(0,850)
+        ].join('\n'),
         deep,requestedResearch,signal:controller.signal,fetcher:fetch,
         standardModel:process.env.GROQ_TEXT_MODEL||'qwen/qwen3.8-27b',
         visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'
       });
-      if(!reply.ok)return res.status(reply.status===400?400:reply.status===429?429:503).json({error:reply.message,code:reply.code});
-      return res.status(200).json(reply);
+      if(!reply.ok){
+        await releaseReservation();
+        if(reply.retryAfterSeconds)res.setHeader('Retry-After',String(reply.retryAfterSeconds));
+        return res.status(reply.status===400?400:reply.status===429?429:503).json({error:reply.message,code:reply.code,
+          retryAfterSeconds:reply.retryAfterSeconds||null,rateLimitScope:reply.rateLimitScope||null,
+          provider:'Groq'});
+      }
+      return res.status(200).json({...reply,usageLimit:reservation.active?{scope:'anonymous_beta',remainingToday:Math.max(0,reservation.limitToday-reservation.usedToday)}:null});
     }catch(error){
+      await releaseReservation();
       console.warn('RAVRENT_GROQ_REQUEST_FAILED',{code:controller.signal.aborted?'TIMEOUT':'NETWORK',name:error?.name});
       return res.status(503).json({error:controller.signal.aborted?'The open-weight AI request timed out. Try a shorter question.':'GroqCloud could not complete the request. Check the provider connection.',code:controller.signal.aborted?'TIMEOUT':'GROQ_NETWORK'});
     }finally{clearTimeout(timer)}
@@ -152,6 +175,7 @@ module.exports=async function handler(req,res){
     }
     return {ok:true,json:await response.json(),model:whichModel,grounded};
   }
+  let geminiFinished=false;
   try{
     // Search grounding is not included with the free tier of the advanced model.
     // Retry without search instead of failing with a quota message.
@@ -197,6 +221,7 @@ module.exports=async function handler(req,res){
       if(typeof p.thoughtSignature==='string')x.thoughtSignature=p.thoughtSignature.slice(0,30000);
       return x;
     }).filter(p=>p.text||p.thoughtSignature).slice(0,12);
+    geminiFinished=true;
     return res.status(200).json({
       reply:answer.slice(0,17000),sources,researchRequested:requestedResearch,researchPerformed,
       researchNote:requestedResearch&&!researchPerformed?'Live research was unavailable. This answer is based on general vehicle knowledge and the details you provided.':null,
@@ -206,5 +231,5 @@ module.exports=async function handler(req,res){
   }catch(err){
     console.error('RAVRENT_AI_NETWORK',{aborted:controller.signal.aborted,name:err?.name});
     return res.status(503).json({error:controller.signal.aborted?'The request took too long. Please retry with a shorter question.':'The assistant is temporarily unavailable. Please retry shortly.',code:controller.signal.aborted?'TIMEOUT':'NETWORK'});
-  }finally{clearTimeout(timer);}
+  }finally{clearTimeout(timer);if(!geminiFinished)await releaseReservation();}
 };
