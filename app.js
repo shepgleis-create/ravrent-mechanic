@@ -206,7 +206,7 @@ async function status(){
  try{
   const response=await fetch('/api/status',{cache:'no-store'});if(!response.ok)throw Error('Unavailable');
   const cfg=await response.json();
-  const label=cfg.paused?'AI paused':!cfg.configured?'AI not configured':recent?(previous.ok?'AI recently tested':'AI offline'):'AI not tested';
+  const label=cfg.paused?'AI paused':cfg.setupRequired?'Groq setup needed':!cfg.configured?'AI not configured':recent?(previous.ok?'AI recently tested':'AI offline'):'AI not tested';
   control.textContent=label;
   control.classList.toggle('ready',Boolean(recent&&previous.ok&&!cfg.paused&&cfg.configured));
   control.classList.toggle('warning',!(recent&&previous.ok&&!cfg.paused&&cfg.configured))
