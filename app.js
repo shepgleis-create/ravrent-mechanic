@@ -88,7 +88,7 @@ function markdown(s){
  }p();l();if(code.length)out+='<pre><code>'+esc(code.join('\n'))+'</code></pre>';return out;
 }
 function messageHtml(m,i){
- if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+(m.video?'<div class="video-pill"><span>▶</span> Video with sound · '+esc(m.video.label||'Vehicle recording')+'</div>':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
+ if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+(m.video?'<div class="video-pill"><span>▶</span> '+(m.video.source==='sampled-frames'?'Video still frames (no audio)':'Video recording')+' · '+esc(m.video.label||'Vehicle recording')+'</div>':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
  if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>'+((m.code==='AI_QUOTA'||m.code==='APP_USAGE_LIMIT')?'AI usage limit reached':'AI provider unavailable')+'</strong><p>'+esc(m.text||'The service is not responding.')+'</p><div class="error-actions"><button data-open-health="1">Connection details</button><button data-open-wizard="1">Guided diagnostics</button><button data-retry="'+i+'">Retry</button></div></div></div>';
  let sources=Array.isArray(m.sources)?m.sources.filter(s=>s?.url&&/^https:\/\//.test(s.url)):[];
  const links=sources.length?'<div class="sources">'+sources.map(s=>'<a class="source" target="_blank" rel="noopener noreferrer" href="'+esc(s.url)+'">'+svg('globe',true)+esc(s.title||'Reference source')+'</a>').join('')+'</div>':'';
@@ -121,13 +121,14 @@ function busy(v){pending=v;$('sendButton').disabled=v||videoUploading||secondsLe
 async function send(text,isRetry){
  const q=String(text||'').trim();if(secondsLeft()>0){updateCooldownUI();return}if(pending||videoUploading||(!q&&!pendingPhoto&&!pendingVideo))return;
  const t=ensureThread();
- if(!isRetry){t.messages.push({role:'user',text:q||(pendingVideo?'Please analyze the motion and audio in this vehicle recording.':'Please inspect this vehicle photo.'),image:pendingPhoto||null,video:pendingVideo||null,at:Date.now()});if(t.title==='New conversation')t.title=(q||(pendingVideo?'Video diagnosis':'Vehicle photo analysis')).slice(0,46);}
+ if(!isRetry){t.messages.push({role:'user',text:q||(pendingVideo?.source==='sampled-frames'?'Please review the visible snapshots of this clip. Audio and motion between frames are not available.':pendingVideo?'Please review this vehicle recording.':'Please inspect this vehicle photo.'),image:pendingPhoto||null,video:pendingVideo||null,at:Date.now()});if(t.title==='New conversation')t.title=(q||(pendingVideo?'Video diagnosis':'Vehicle photo analysis')).slice(0,46);}
  pendingPhoto='';pendingVideo=null;$('photoPreview').classList.add('hide');$('photoInput').value='';$('videoPreview').classList.add('hide');$('videoInput').value='';$('messageInput').value='';t.updated=Date.now();
  store();renderNav();renderChat();busy(true);
  try{
   const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(data.deep===true?-7:-5);
-  const lastImage=selected.findLastIndex(m=>m.role==='user'&&m.image);
-  const lastVideo=selected.findLastIndex(m=>m.role==='user'&&m.video);
+  // Prior photos and videos are never resent automatically on follow-ups.
+  const lastImage=selected.length-1;
+  const lastVideo=selected.length-1;
   const messages=selected.map((m,i)=>({
    role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.video&&i===lastVideo?{video:m.video}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
