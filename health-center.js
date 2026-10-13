@@ -22,7 +22,17 @@ function render(){const open=cases.filter(c=>c.status!=='resolved');$('vehicleCo
  if(c.tests)row.append(el('p','Tests / confirmed fix: '+c.tests));
  const actions=el('div',undefined,'case-actions'),edit=el('button','Edit'),remove=el('button','Delete');
  edit.onclick=()=>{editing=c.id;for(const [key,id] of Object.entries({vehicleId:'caseVehicle',title:'caseTitle',codes:'caseCodes',priority:'casePriority',cost:'caseCost',status:'caseStatus',symptoms:'caseSymptoms',tests:'caseTests'}))$(id).value=c[key]??'';message('Editing case. Save to apply changes.');$('caseTitle').focus();};
- remove.onclick=()=>{if(!confirm('Delete this repair case?'))return;cases=cases.filter(x=>x.id!==c.id);persist();render();message('Case deleted.')};actions.append(edit,remove);row.append(actions);list.append(row)});
+ remove.onclick=()=>{if(!confirm('Delete this repair case?'))return;cases=cases.filter(x=>x.id!==c.id);persist();render();message('Case deleted.')};
+ const ai=el('button','Review with AI');ai.type='button';
+ ai.onclick=()=>{
+  const prompt='Review this user-entered automotive repair case. Vehicle: '+(v?vehicleName(v):'Unassigned')+
+   '. Issue: '+String(c.title||'').slice(0,180)+'. Codes: '+String(c.codes||'').slice(0,220)+
+   '. Symptoms: '+String(c.symptoms||'').slice(0,1100)+'. Owner-entered checks: '+String(c.tests||'').slice(0,700)+
+   '. Distinguish confirmed evidence from assumptions, prioritize safety, and recommend inexpensive next diagnostic steps. Do not invent measurements or claim repairs were confirmed.';
+  try{sessionStorage.setItem('ravrent_ai_intake_v1',JSON.stringify({source:'health',question:prompt.slice(0,3150),created:Date.now()}));location.href='/'}
+  catch{message('Could not prepare the AI request. Open Diagnostics and describe this case manually.')}
+ };
+ actions.append(edit,ai,remove);row.append(actions);list.append(row)});
 }
 function clear(){editing=null;for(const id of ['caseTitle','caseCodes','caseSymptoms','caseTests'])$(id).value='';$('caseCost').value='0';$('casePriority').value='routine';$('caseStatus').value='open';$('caseVehicle').value='';}
 $('clearCase').onclick=()=>{clear();message('Form cleared.')};
