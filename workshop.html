@@ -28,7 +28,7 @@
 <label>Job status <select id="quoteStage"><option value="draft">Draft</option><option value="quoted">Quoted (manually marked)</option><option value="approved">Customer approved (manually recorded)</option><option value="progress">In progress</option><option value="completed">Completed (not paid confirmation)</option></select></label>
 </div>
 <div class="group-title">Line items</div><p class="detail">Charge labor, parts and fees as separate line items. Unit costs are internal and will not appear on customer printouts.</p>
-<div id="quoteLines" class="estimate-lines"></div><button type="button" id="addLine" class="outline add-line">+ Add labor, part or fee</button>
+<div class="template-tools"><label>Reusable service template<select id="templateSelect"><option value="">Select a service or saved template</option></select></label><button type="button" id="applyTemplate" class="outline">Insert template</button><button type="button" id="saveTemplate" class="outline">Save my items as template</button><button type="button" id="deleteTemplate" class="outline">Remove custom template</button></div><p class="detail">Templates are editable starting points. They contain no assumed part prices or labor times, and do not prove fitment.</p><div id="quoteLines" class="estimate-lines"></div><button type="button" id="addLine" class="outline add-line">+ Add labor, part or fee</button>
 <div class="group-title">Tax, discount and deposit request</div><div class="form-grid">
 <label>Tax rate (%) <input id="quoteTax" type="number" min="0" max="30" step="0.01" placeholder="Enter local rate; default 0"></label>
 <label>Discount ($) <input id="quoteDiscount" type="number" min="0" max="10000000" step="0.01" placeholder="0"></label>
