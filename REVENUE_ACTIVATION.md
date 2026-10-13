@@ -64,3 +64,19 @@ The public `/pricing.html` shows *proposed*, disabled paid tiers. No customer is
 ## Status semantics
 
 A Vercel **READY** deployment only establishes build/deploy completion, not real ad approval, bank settlement, iPhone camera recognition, or external AI success. State each independently. Never fabricate revenue totals, sponsored offers, publisher approvals or completed vehicle history records.
+
+## October 12 stability + product development update
+
+- Replaced App Diagnostics' oversized status cards and warning box with a compact real-connection screen. App header now opens this diagnostic screen.
+- Added reason-based Google Gemini response classification: invalid/blocked Standard keys, denied projects, disabled API, restricted keys, model access, and quotas. Provider errors are reduced to safe codes and action messages; they do not echo key values or raw provider bodies.
+- Verified the Vercel project has a `GEMINI_API_KEY` setting, but production Gemini still returns permission failures per user screenshot. Vercel's connection cannot disclose the key type or change Google AI project permission. Do not claim the assistant is fixed until a live generated answer succeeds.
+- Important: Google began blocking unrestricted Standard API keys in June 2026 and migrated to Auth keys by September 2026. Generate a new Auth key in Google AI Studio and replace `GEMINI_API_KEY` in Vercel if the key is older or blocked. If Google says the project itself was denied access, the owner must review Google account/project access with Google.
+- Reduced quick-mode conversation context and output limits, avoided resending historical media, removed unnecessary retries on authentication errors, and added client timeouts.
+- `/shop-insights.html` adds real locally computed estimate pipeline, manually recorded approval-rate tracking, completed-job value (explicitly not payments), pre-overhead margins, CSV summary, and an editable labor-rate break-even planner.
+- `/workshop.html` now includes five unpriced service templates and reusable custom shop templates with local storage; no fake OEM labor times or part prices.
+- AdSense remains disabled because no ADSENSE environment variables are configured. The `ads.txt` and policy-gated guide placements are ready, but publisher approval and consent setup have not been established.
+- Paid plans remain disabled: the connected Stripe accounts observed previously belong to Tracks Auto Care LLC. Confirm the correct Ravrent merchant account before any charge, checkout, subscription, or paid entitlement.
+
+**Current feature value:** Free beta workshop estimates, customer printouts, custom service templates, local shop performance analytics, and reseller inventory. Future paid value should concentrate on secure account sync, team seats, customer approvals, invoice/payment status syncing, customer portals, shared fleet records, professional reporting, and bounded AI credit packs. Do not sell existing free functionality as exclusive to a paid tier without a clearly communicated transition.
+
+**Launch verification remaining:** live Gemini success, iPhone/TikTok webview smoke test, account-safe merchant billing, signed webhooks, durable entitlements and quotas, and AdSense approval.
