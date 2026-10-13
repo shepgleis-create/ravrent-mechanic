@@ -2,3 +2,31 @@
 @media(max-width:900px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-head{align-items:flex-start;flex-direction:column}.head-actions{width:100%}.searchbox{flex:1}.searchbox input{width:100%}}
 @media(max-width:600px){.shell{padding:0 15px}.topbar{align-items:flex-start;flex-direction:column;padding:16px 0;gap:9px;min-height:auto}.topbar nav{gap:14px}.topbar nav a{font-size:12px}.hero{padding:37px 0 26px}.hero-layout{flex-direction:column;align-items:flex-start;gap:20px}.hero h1{font-size:35px;letter-spacing:-1.3px;margin:10px 0}.hero p{font-size:14px}.primary.big{width:100%}.metrics{gap:8px}.metric{padding:13px}.metric strong{font-size:23px}.metric small{font-size:10px}.panel-head{padding:19px 15px 15px}.panel h2{font-size:24px}.head-actions{flex-wrap:wrap}.head-actions .outline{flex:none}.tabs{padding:0 15px 15px}.inventory-list{padding:10px}.inventory-card{grid-template-columns:1fr;padding:13px}.inventory-actions{align-items:stretch;flex-direction:row}.inventory-actions>*{flex:1;text-align:center}.inventory-card .numbers{gap:12px}.dialog-head{padding:15px}.dialog-head h2{font-size:21px}.form-body{padding:5px 15px 20px;max-height:calc(92dvh - 136px)}.form-grid{gap:10px;grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid label{font-size:11px}.form-grid input,.form-grid select{padding:10px 8px;font-size:14px}.lookup-cell{justify-content:flex-end;align-items:center;gap:5px}.lookup-cell .outline{padding:10px}.cost-summary{grid-template-columns:1fr}.cost-summary>div{display:flex;align-items:center;justify-content:space-between;padding:10px}.dialog-actions{padding:13px 15px;flex-wrap:wrap}.dialog-actions #formStatus{order:3;flex-basis:100%}}
 @media(max-width:370px){.form-grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.head-actions .outline{width:100%}.lookup-cell{justify-content:flex-start}}
+
+/* Live vehicle condition worksheet */
+.restore-button{border:1px solid #4a5b6b;border-radius:10px;background:#202d39;color:#f1f5f9;font-weight:750;padding:12px 17px;white-space:nowrap;cursor:pointer;text-align:center}
+.restore-button:hover{background:#2b3d4b}
+.restore-button:focus-within{outline:2px solid #e8a18c}
+.head-actions{flex-wrap:wrap;justify-content:flex-end}
+#restoreJson[hidden]{display:none!important}
+.inspect-summary{font-size:12px;color:#dfaa92;margin-top:7px}
+.inspection-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.inspection-item{display:grid;gap:9px;padding:12px;background:#192530;border:1px solid #354858;border-radius:10px;min-width:0}
+.inspection-item span{font-size:12px;color:#cbd6e0;line-height:1.4}
+.inspection-item select{width:100%;min-width:0;padding:9px;border:1px solid #43576a;border-radius:8px;background:#111c26;color:#eaf2f7;font-size:13px}
+.inspection-summary{margin:12px 0 20px;color:#e7b59e;font-size:12px;line-height:1.6}
+.calculation-note{font-size:12px!important;line-height:1.6;color:#aebac4;margin:6px 0 14px}
+.print-report{display:none}
+@media(max-width:650px){.inspection-grid{grid-template-columns:1fr}.head-actions{display:grid;grid-template-columns:1fr 1fr;justify-content:stretch}.head-actions .searchbox{grid-column:1/-1}.head-actions button,.restore-button{padding:10px 8px;font-size:12px}.inventory-actions{flex-wrap:wrap}.inventory-actions button,.inventory-actions a{min-width:90px;flex:1}.cost-summary{grid-template-columns:1fr}.dialog-actions .outline{white-space:normal}}
+@media print{
+ @page{size:auto;margin:15mm}
+ html,body{background:#fff!important;color:#111!important;font:12px/1.5 Arial,sans-serif!important}
+ .shell,dialog{display:none!important}
+ .print-report,.print-report[hidden]{display:block!important;color:#111!important;background:#fff!important;max-width:800px;padding:0;margin:0 auto;position:static}
+ .print-report h1{font-size:23px;margin:0 0 5px;letter-spacing:-.5px}
+ .print-report h2{font-size:14px;border-bottom:1px solid #bbb;padding-bottom:5px;margin:17px 0 8px;break-after:avoid}
+ .print-report .print-meta,.print-report .print-notes{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+ .print-report .print-row{display:flex;align-items:start;justify-content:space-between;gap:20px;padding:5px 2px;border-bottom:1px solid #eee;break-inside:avoid}
+ .print-report .print-row span{flex:1;color:#555}
+ .print-report .print-row strong{max-width:62%;text-align:right;font-weight:600;overflow-wrap:anywhere}
+}
