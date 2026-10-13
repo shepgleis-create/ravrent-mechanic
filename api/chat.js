@@ -97,7 +97,7 @@ module.exports=async function handler(req,res){
   const origin=req.headers?.origin,host=req.headers?.host;
   if(origin&&host){try{if(new URL(origin).host!==host)return res.status(403).json({error:'This request must come from the app.',code:'ORIGIN'});}catch{ return res.status(403).json({error:'Invalid request origin.',code:'ORIGIN'});}}
   if(process.env.AI_REQUESTS_ENABLED==='false')return res.status(503).json({error:'AI chat is temporarily paused by the app owner. Offline guided diagnostics remain available.',code:'OWNER_PAUSED'});
-  const key=process.env.GEMINI_API_KEY;
+  const key=String(process.env.GEMINI_API_KEY||'').trim();
   if(!key)return res.status(503).json({error:'The assistant is not set up yet. The app owner needs to finish server configuration.',code:'NOT_CONFIGURED'});
   const remote=asText(req.headers?.['x-forwarded-for']||req.socket?.remoteAddress||'unknown',100).split(',')[0];
   if(!takeSlot(remote))return res.status(429).json({error:'Too many requests right now. Please wait before trying again.',code:'LOCAL_LIMIT'});
@@ -133,7 +133,7 @@ module.exports=async function handler(req,res){
       let reason='';
       try{const errBody=await response.json();reason=asText(errBody?.error?.message,400);}catch(e){}
       console.warn('RAVRENT_AI_REQUEST_FAILED',{status:response.status,model:whichModel,grounded,reason:reason.slice(0,150)});
-      return {ok:false,status:response.status};
+      return {ok:false,status:response.status,reason};
     }
     return {ok:true,json:await response.json(),model:whichModel,grounded};
   }
@@ -155,14 +155,31 @@ module.exports=async function handler(req,res){
     }
     // If the main model's allowance is exhausted, try a separately provisioned,
     // lower-cost model once. No silent template responses.
-    if(result&&!result.ok&&result.status===429&&!controller.signal.aborted&&model!=='gemini-2.5-flash-lite'){
+    if(result&&!result.ok&&(result.status===429||((result.status===403||result.status===404)&&/model|not supported|not found/i.test(result.reason||'')))&&!controller.signal.aborted&&model!=='gemini-2.5-flash-lite'){
       usedFallback=true;
       result=await generate('gemini-2.5-flash-lite',false,'LOW');
     }
     if(!result?.ok){
       const status=result?.status||502;
       if(status===429)return res.status(503).json({error:'The assistant is at its current usage limit. Please try again later.',code:'AI_QUOTA'});
-      if(status===401||status===403)return res.status(503).json({error:'The AI service rejected the server credentials or this project does not have permission to use the selected model. The app owner must check the server key, API access and billing.',code:'AI_AUTH'});
+      if(status===401||status===403){
+        // Only return a safe classification, never raw provider text or key data.
+        const reason=String(result.reason||'');
+        const cls=/api.?key.+(invalid|expired)|invalid.+api.?key|api_key_invalid/i.test(reason)?'AI_KEY_INVALID':
+          /service.disabled|api.+not.+enabled|generativelanguage.googleapis.com.+disabled/i.test(reason)?'AI_API_DISABLED':
+          /referrer|ip address|api.?key.+restricted|request.+blocked/i.test(reason)?'AI_KEY_RESTRICTED':
+          /billing|payment|required.+bill/i.test(reason)?'AI_BILLING':
+          /model|permission/i.test(reason)?'AI_MODEL_ACCESS':'AI_AUTH';
+        const details={
+          AI_KEY_INVALID:'The Google AI API key is invalid or expired. The app owner needs to replace GEMINI_API_KEY in Vercel.',
+          AI_API_DISABLED:'The Google Generative Language API is not enabled for the server key’s project.',
+          AI_KEY_RESTRICTED:'The server key has restrictions that block this Vercel deployment.',
+          AI_BILLING:'Google AI access for this project is blocked by billing or project payment requirements.',
+          AI_MODEL_ACCESS:'The server key does not have permission to use the configured Gemini model.',
+          AI_AUTH:'Google AI rejected the request. The app owner needs to verify API key validity, project permissions and restrictions.'
+        };
+        return res.status(503).json({error:details[cls],code:cls});
+      }
       if(status===404)return res.status(503).json({error:'The configured AI model is not available to this project. The app owner must update the model setting.',code:'AI_MODEL'});
       return res.status(503).json({error:'The assistant could not complete this request. Please try again.',code:'AI_REQUEST'});
     }
