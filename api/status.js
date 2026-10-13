@@ -6,14 +6,16 @@ module.exports=function handler(req,res){
  const preference=String(process.env.AI_PROVIDER||'auto').toLowerCase();
  const groq=Boolean(String(process.env.GROQ_API_KEY||'').trim());
  const gemini=Boolean(String(process.env.GEMINI_API_KEY||'').trim());
- const provider=preference==='groq'||(preference!=='gemini'&&groq)?'Groq':'Gemini';
+ const together=Boolean(String(process.env.TOGETHER_API_KEY||'').trim());
+ const provider=preference==='together'||(preference==='auto'&&!groq&&together)?'Together AI':
+  preference==='groq'||(preference!=='gemini'&&groq)?'Groq':'Gemini';
  return res.status(200).json({
-  configured:provider==='Groq'?groq:gemini,provider,
-  groqConfigured:groq,geminiConfigured:gemini,
+  configured:provider==='Together AI'?together:provider==='Groq'?groq:gemini,provider,
+  groqConfigured:groq,togetherConfigured:together,geminiConfigured:gemini,
   paused:process.env.AI_REQUESTS_ENABLED==='false',
-  setupRequired:!groq&&preference!=='gemini',
-  setupProvider:!groq&&preference!=='gemini'?'Groq':null,
-  setupMessage:!groq&&preference!=='gemini'?
+  setupRequired:!groq&&!together&&preference!=='gemini',
+  setupProvider:!groq&&!together&&preference!=='gemini'?'Groq':null,
+  setupMessage:!groq&&!together&&preference!=='gemini'?
    'Groq is not activated yet. Create a GroqCloud API key, add GROQ_API_KEY to Vercel Production environment variables, and redeploy. Until then the app uses the configured Gemini provider.':
    null
  });
