@@ -89,7 +89,7 @@ function markdown(s){
 }
 function messageHtml(m,i){
  if(m.role==='user')return '<div class="message user"><div class="message-body">'+(m.image?'<img class="attachment" alt="Vehicle photo" src="'+esc(m.image)+'">':'')+(m.video?'<div class="video-pill"><span>▶</span> Video with sound · '+esc(m.video.label||'Vehicle recording')+'</div>':'')+'<div>'+esc(m.text||'')+'</div></div></div>';
- if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>AI provider unavailable</strong><p>'+esc(m.text||'The service is not responding.')+'</p><div><button data-open-health="1">Connection details</button><button data-open-wizard="1">Use guided diagnostics</button><button data-retry="'+i+'">Retry</button></div></div></div>';
+ if(m.role==='error')return '<div class="message assistant"><div class="who">!</div><div class="message-body error-note"><strong>'+((m.code==='AI_QUOTA'||m.code==='APP_USAGE_LIMIT')?'AI usage limit reached':'AI provider unavailable')+'</strong><p>'+esc(m.text||'The service is not responding.')+'</p><div class="error-actions"><button data-open-health="1">Connection details</button><button data-open-wizard="1">Guided diagnostics</button><button data-retry="'+i+'">Retry</button></div></div></div>';
  let sources=Array.isArray(m.sources)?m.sources.filter(s=>s?.url&&/^https:\/\//.test(s.url)):[];
  const links=sources.length?'<div class="sources">'+sources.map(s=>'<a class="source" target="_blank" rel="noopener noreferrer" href="'+esc(s.url)+'">'+svg('globe',true)+esc(s.title||'Reference source')+'</a>').join('')+'</div>':'';
  const research=m.researchRequested?(m.researchPerformed?'Web research used'+(sources.length?' · '+sources.length+' references':''):'No verified web sources returned'):'Web research not requested';
@@ -105,8 +105,9 @@ function renderChat(){
  for(const [name,active] of [['deep',data.deep===true],['web',data.research===true]]){
   const b=$(name+'Toggle');b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
  }
- $('sendButton').disabled=pending||videoUploading;
+ $('sendButton').disabled=pending||videoUploading||secondsLeft()>0;
  if(pending)spinner();else unspin();
+ updateCooldownUI();
  requestAnimationFrame(()=>scrollBottom());
 }
 function scrollBottom(){const s=$('chatScroll');if(s)s.scrollTop=s.scrollHeight;}
@@ -116,15 +117,15 @@ function spinner(){
  let i=0;clearInterval(spinnerTimer);spinnerTimer=setInterval(()=>{if($('thinkingText'))$('thinkingText').textContent=phrases[++i%phrases.length];},6500);scrollBottom();
 }
 function unspin(){clearInterval(spinnerTimer);$('spinner')?.remove();}
-function busy(v){pending=v;$('sendButton').disabled=v||videoUploading;$('messageInput').disabled=v;if(v)spinner();else unspin();}
+function busy(v){pending=v;$('sendButton').disabled=v||videoUploading||secondsLeft()>0;$('messageInput').disabled=v;if(v)spinner();else unspin();}
 async function send(text,isRetry){
- const q=String(text||'').trim();if(pending||videoUploading||(!q&&!pendingPhoto&&!pendingVideo))return;
+ const q=String(text||'').trim();if(secondsLeft()>0){updateCooldownUI();return}if(pending||videoUploading||(!q&&!pendingPhoto&&!pendingVideo))return;
  const t=ensureThread();
  if(!isRetry){t.messages.push({role:'user',text:q||(pendingVideo?'Please analyze the motion and audio in this vehicle recording.':'Please inspect this vehicle photo.'),image:pendingPhoto||null,video:pendingVideo||null,at:Date.now()});if(t.title==='New conversation')t.title=(q||(pendingVideo?'Video diagnosis':'Vehicle photo analysis')).slice(0,46);}
  pendingPhoto='';pendingVideo=null;$('photoPreview').classList.add('hide');$('photoInput').value='';$('videoPreview').classList.add('hide');$('videoInput').value='';$('messageInput').value='';t.updated=Date.now();
  store();renderNav();renderChat();busy(true);
  try{
-  const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(data.deep===true?-14:-9);
+  const selected=t.messages.filter(m=>m.role==='user'||m.role==='assistant').slice(data.deep===true?-7:-5);
   const lastImage=selected.findLastIndex(m=>m.role==='user'&&m.image);
   const lastVideo=selected.findLastIndex(m=>m.role==='user'&&m.video);
   const messages=selected.map((m,i)=>({
@@ -135,8 +136,8 @@ async function send(text,isRetry){
   try{response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:aiAbort.signal,
    body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep===true,research:data.research===true})})}finally{clearTimeout(aiTimer)}
   let result={};try{result=await response.json();}catch(e){}
-  if(!response.ok||!result.reply){let error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;error.code=result.code||'AI_REQUEST';throw error;}
-  try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:true,code:'CONNECTED',message:'Google returned a real AI response.',time:Date.now()}))}catch{}
+  if(!response.ok||!result.reply){const error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;error.code=result.code||'AI_REQUEST';error.retryAfterSeconds=result.retryAfterSeconds||Number(response.headers?.get?.('Retry-After'))||null;error.rateLimitScope=result.rateLimitScope||null;throw error;}
+  try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:true,code:'CONNECTED',message:(result.provider||'AI provider')+' returned a real AI response.',time:Date.now()}))}catch{}
   if($('connection')){$('connection').textContent='AI connected';$('connection').classList.add('ready');$('connection').classList.remove('warning')}
   t.messages.push({role:'assistant',text:result.reply,mode:result.mode||'AI response',
    sources:result.sources||[],researchRequested:result.researchRequested,researchPerformed:result.researchPerformed,researchNote:result.researchNote||null,
@@ -145,11 +146,13 @@ async function send(text,isRetry){
   const reason=e.name==='AbortError'?'The AI request timed out. Try again without web research or use Guided Diagnostics.':e.message||'The assistant is unavailable right now. Please try again soon.';
   const code=e.name==='AbortError'?'TIMEOUT':e.code||'AI_NETWORK';
   try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:false,code,message:reason,time:Date.now()}))}catch{}
-  if($('connection')){$('connection').textContent='AI offline';$('connection').classList.remove('ready');$('connection').classList.add('warning')}
-  t.messages.push({role:'error',text:reason,code,at:Date.now()});
+  if((code==='AI_QUOTA'||code==='APP_USAGE_LIMIT')&&e.retryAfterSeconds)recordCooldown(e.retryAfterSeconds);
+  if($('connection')){$('connection').textContent=code==='AI_QUOTA'||code==='APP_USAGE_LIMIT'?'AI rate limited':'AI offline';$('connection').classList.remove('ready');$('connection').classList.add('warning')}
+  t.messages.push({role:'error',text:reason,code,rateLimitScope:e.rateLimitScope||null,at:Date.now()});
  }finally{t.updated=Date.now();busy(false);store();renderNav();renderChat();}
 }
 function retry(i){
+ if(secondsLeft()>0){updateCooldownUI();return}
  const t=current();if(!t||t.messages.at(-1)?.role!=='error')return;
  const previous=t.messages.slice(0,i).reverse().find(m=>m.role==='user');if(!previous)return;
  t.messages.pop();send(previous.text,true);
