@@ -176,3 +176,54 @@ input,select,textarea{color-scheme:dark}
 @media(max-width:390px){.wordmark{max-width:105px;font-size:13px}.connection{max-width:78px;font-size:9px}.topbar{padding:0 8px}}
 
 .ai-check-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:15px}.ai-check-actions .outline-btn{margin-top:0!important}.ai-check-actions button{min-height:43px}@media(max-width:470px){.ai-check-actions{flex-direction:column;align-items:stretch}.ai-check-actions button{width:100%}}
+
+/* Diagnostics v3: compact, functional statuses instead of misleading dashboard cards */
+#healthPane{background:#0c1118}
+.health-minimal{max-width:760px;margin:0 auto;padding-top:14px}
+.health-heading{margin-bottom:25px}
+.health-heading h1{font-size:clamp(23px,4vw,31px);letter-spacing:-.9px}
+.health-heading p{font-size:13px;line-height:1.6;margin-top:7px}
+.health-status{display:flex;align-items:flex-start;gap:15px;padding:18px 0 23px;border-bottom:1px solid #34404b}
+.health-dot{width:11px;height:11px;margin-top:8px;border-radius:99px;background:#687988;box-shadow:0 0 0 5px #46546422;flex-shrink:0}
+.health-dot.status-ok{background:#64c5a3;box-shadow:0 0 0 5px #56b08b22}
+.health-dot.status-working{background:#e9b37d;box-shadow:0 0 0 5px #e9b37d22}
+.health-dot.status-fail{background:#e48f86;box-shadow:0 0 0 5px #e48f8622}
+.health-status strong{font-size:19px;letter-spacing:-.3px;color:#f0f4f8}
+.health-status p{font-size:13px;line-height:1.7;color:#aabcca;margin:7px 0 0;max-width:630px}
+.health-actions{display:flex;flex-wrap:wrap;gap:10px;margin:23px 0 10px}
+.health-actions button{min-height:46px;padding:12px 18px}
+.health-feedback{font-size:13px;color:#bdcbd7;line-height:1.65;min-height:0;margin:12px 0;overflow-wrap:anywhere}
+.health-feedback:empty{display:none}
+.health-list{display:block!important;margin:22px 0}
+.health-row{display:flex;justify-content:space-between;align-items:center;gap:20px;min-height:53px;border-bottom:1px solid #2b3844;padding:13px 1px;background:transparent}
+.health-row:first-child{border-top:1px solid #2b3844}
+.health-row span{font-weight:650;color:#dce7ef;font-size:13px}
+.health-row small{font-size:12px;color:#a9b8c7;line-height:1.5;text-align:right;max-width:63%;overflow-wrap:anywhere}
+.health-row small.health-ok{color:#8bd2b6}
+.health-row small.health-fail{color:#efa39b}
+.health-advanced{border-top:1px solid #35414d;margin-top:25px;padding-top:8px}
+.health-advanced>summary{list-style:none;cursor:pointer;padding:17px 0;font-size:13px;font-weight:650;color:#b8c8d5;position:relative}
+.health-advanced>summary::-webkit-details-marker{display:none}
+.health-advanced>summary::after{content:"+";position:absolute;right:0;font-size:21px;top:10px;font-weight:400}
+.health-advanced[open]>summary::after{content:"−"}
+.health-advanced-body{border-top:1px solid #2c3945;padding:17px 1px 25px;color:#aebdca;font-size:13px;line-height:1.75}
+.health-advanced-body p{margin:0 0 16px}
+.health-advanced-body .outline-btn{margin:0 0 6px;min-height:42px}
+.health-fix-steps{padding-left:21px;margin:15px 0 20px}
+.health-fix-steps li{padding:5px 0}
+.health-fix-steps code{color:#efb49e}
+.connection{cursor:pointer}
+@media(max-width:650px){
+ #healthPane{padding:22px 19px 52px}
+ .health-minimal{padding-top:0}
+ .health-heading{margin-bottom:17px}
+ .health-heading h1{font-size:26px}
+ .health-status{padding:10px 0 18px}
+ .health-status strong{font-size:17px}
+ .health-status p{font-size:12px}
+ .health-actions{display:grid;grid-template-columns:1fr;gap:9px;margin:21px 0 13px}
+ .health-actions button{width:100%;min-height:48px}
+ .health-row{min-height:45px;gap:10px;padding:12px 0}
+ .health-row span{font-size:12px}
+ .health-row small{font-size:11px;max-width:59%}
+}
