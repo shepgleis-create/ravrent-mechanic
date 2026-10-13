@@ -45,6 +45,8 @@ function render(){
   const stage=el('span','stage '+safe(v.stage,30),stages[v.stage]||'Researching');
   const title=el('h3','',label(v)),meta=el('div','meta',(v.vin?'VIN '+v.vin+' · ':'')+(v.mileage?Number(v.mileage).toLocaleString('en-US')+' mi':'Mileage not recorded'));
   left.append(stage,title,meta);
+  const review=Object.values(v.inspection||{}),recorded=review.filter(x=>x!=='untested').length,flagged=review.filter(x=>x==='concern'||x==='fail').length;
+  if(recorded){left.append(el('div','inspect-summary',recorded+'/'+inspections.length+' owner inspection areas recorded'+(flagged?' · '+flagged+' concern(s)':' · no reported concerns')))}
   const nums=el('div','numbers');
   const cost=sumCost(v),sale=saleValue(v);
   for(const [name,amount] of [['Direct costs',fmt(cost)],[v.stage==='sold'?'Sale amount':'Target sale',sale===null?'Not entered':fmt(sale)],['Gross '+(v.stage==='sold'?'profit':'projected profit'),sale===null?'—':fmt(sale-cost)]]){
@@ -55,7 +57,8 @@ function render(){
   left.append(nums);
   const edit=el('button','','Open worksheet');edit.type='button';edit.onclick=()=>open(v.id);
   const vin=el('a','','Vehicle research');vin.href='/vin-report.html'+(v.vin?'?vin='+encodeURIComponent(v.vin):'');
-  right.append(edit,vin);card.append(left,right);host.append(card)
+  const report=el('button','','Print report');report.type='button';report.onclick=()=>printReportFor(v);
+  right.append(edit,report,vin);card.append(left,right);host.append(card)
  }
 }
 function getForm(){
@@ -151,6 +154,73 @@ function exportCsv(){
  download('ravrent-reseller-inventory-'+new Date().toISOString().slice(0,10)+'.csv','\uFEFF'+rows.join('\r\n'),'text/csv;charset=utf-8');
  $('inventoryHint').textContent='CSV exported. This browser remains the primary copy unless you back it up.';
 }
+
+function buildInspection(){
+ const host=$('inspectionGrid');host.replaceChildren();
+ for(const [key,name] of inspections){
+  const item=el('label','inspection-item');
+  const title=el('span','',name);
+  const select=el('select');select.id='inspect-'+key;select.dataset.inspect=key;
+  for(const [option,label] of Object.entries(inspectStates)){const node=el('option','',label);node.value=option;select.append(node)}
+  select.value='untested';select.addEventListener('change',updateMath);item.append(title,select);host.append(item)
+ }
+}
+function backupJson(){
+ if(!inventory.length){$('inventoryHint').textContent='Add a vehicle before creating a backup.';return}
+ const snapshot={app:'ravrent-mechanic',format:'reseller-inventory',version:1,createdAt:new Date().toISOString(),records:inventory};
+ download('ravrent-reseller-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(snapshot,null,2),'application/json;charset=utf-8');
+ $('inventoryHint').textContent='Backup exported. Keep your JSON file somewhere safe; data is not cloud-synced.'
+}
+function normalizedRecord(v){
+ if(!v||typeof v!=='object'||Array.isArray(v))return null;
+ const record={id:safe(v.id,100),vin:safe(v.vin,17).toUpperCase(),year:safe(v.year,4),make:safe(v.make,60),model:safe(v.model,80),trim:safe(v.trim,100),mileage:safe(v.mileage,12),stage:safe(v.stage,30),asking:safe(v.asking,20),desiredProfit:safe(v.desiredProfit,20),actualSale:safe(v.actualSale,20),notes:safe(v.notes,3000),created:safe(v.created,40),updated:safe(v.updated,40),inspection:{}};
+ for(const key of costs)record[key]=safe(v[key],20);
+ for(const [key] of inspections)record.inspection[key]=inspectStates[v.inspection?.[key]]?v.inspection[key]:'untested';
+ if(!record.id||validate(record))return null;
+ return record
+}
+async function restoreJson(file){
+ if(!file)return;
+ if(file.size>2*1024*1024){$('inventoryHint').textContent='Backup file is over the 2 MB limit.';return}
+ try{
+  const data=JSON.parse(await file.text());
+  if(data?.app!=='ravrent-mechanic'||data?.format!=='reseller-inventory'||data?.version!==1||!Array.isArray(data.records)||data.records.length>300||data.records.length===0)throw Error('Not a valid Ravrent reseller backup');
+  const valid=data.records.map(normalizedRecord);
+  if(valid.some(x=>!x))throw Error('Backup includes invalid or unsupported vehicle records');
+  const ids=new Set(inventory.map(x=>x.id)),vins=new Set(inventory.filter(x=>x.vin).map(x=>x.vin));
+  const additions=[];
+  for(const record of valid){if(ids.has(record.id)||(record.vin&&vins.has(record.vin)))continue;ids.add(record.id);if(record.vin)vins.add(record.vin);additions.push(record)}
+  if(!additions.length){$('inventoryHint').textContent='All backup vehicles already exist here; nothing changed.';return}
+  if(inventory.length+additions.length>300)throw Error('Import would exceed the 300-vehicle local storage limit');
+  if(!confirm('Import '+additions.length+' new vehicle records? Existing vehicles will not be overwritten.'))return;
+  const old=inventory;inventory=[...additions,...inventory];
+  if(!persist()){inventory=old;throw Error('Not enough browser storage to restore this backup')}
+  render();$('inventoryHint').textContent=additions.length+' vehicles restored from backup. Existing vehicle records were preserved.';
+ }catch(e){$('inventoryHint').textContent='Restore failed: '+(e.message||'Invalid backup file')}
+}
+function printReportFor(v){
+ const report=$('printReport');report.replaceChildren();
+ report.append(el('h1','','Ravrent Mechanic — Vehicle Acquisition & Inspection'));
+ report.append(el('p','print-meta','Prepared '+new Date().toLocaleString('en-US')+' · Vehicle record is user-entered, not independently verified'));
+ const heading=(text)=>report.append(el('h2','',text));
+ const line=(name,data)=>{const item=el('div','print-row');item.append(el('span','',name),el('strong','',String(data)));report.append(item)};
+ heading('Vehicle identity');
+ line('Vehicle',label(v));line('VIN',v.vin||'Not entered');line('Odometer',v.mileage?v.mileage+' miles (reported)':'Not provided');line('Pipeline stage',stages[v.stage]||'Not specified');
+ heading('Acquisition and sale');
+ const cost=sumCost(v),sale=saleValue(v);
+ for(const [key,name] of [['purchase','Purchase price'],['buyerFees','Buyer fees'],['transport','Transport'],['parts','Parts'],['labor','Labor'],['detailing','Detailing'],['paperwork','Title / fees'],['other','Other direct costs']])line(name,fullMoney.format(number(v[key])));
+ line('Total direct costs',fullMoney.format(cost));line(v.stage==='sold'?'Actual sale price':'Target asking price',sale===null?'Not entered':fullMoney.format(sale));
+ line('Gross '+(v.stage==='sold'?'profit':'projected profit'),sale===null?'Cannot calculate':fullMoney.format(sale-cost));
+ heading('Inspection — user-entered');
+ for(const [key,name] of inspections)line(name,inspectStates[v.inspection?.[key]]||inspectStates.untested);
+ heading('Evidence, concerns and notes');
+ report.append(el('p','print-notes',v.notes||'No owner notes recorded.'));
+ heading('Report limitations');
+ report.append(el('p','print-notes','This is a user-entered acquisition and inspection worksheet, NOT a CARFAX or verified vehicle-history report. It does not independently establish title status, accident history, odometer accuracy, liens, VIN-specific recall eligibility, completed recall repairs, or mechanical condition. Reported profit excludes unentered fees, financing, taxes, overhead and other liabilities.'));
+ report.hidden=false;
+ $('vehicleDialog').close();
+ if(typeof window.print==='function')window.print();
+}
 function initIntake(){
  let intake=null;try{intake=JSON.parse(sessionStorage.getItem(INTAKE)||'null');sessionStorage.removeItem(INTAKE)}catch{}
  if(intake&&typeof intake==='object'&&/^[A-HJ-NPR-Z0-9]{17}$/.test(safe(intake.vin,40))){open(null,{vin:intake.vin,year:safe(intake.year,4),make:safe(intake.make,60),model:safe(intake.model,80),trim:safe(intake.trim,100),stage:'considering'})}
@@ -173,9 +243,13 @@ $('vehicleForm').addEventListener('change',updateMath);
 $('formVin').addEventListener('input',()=>{$('formVin').value=$('formVin').value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,'').slice(0,17)});
 $('search').addEventListener('input',render);
 $('exportCsv').addEventListener('click',exportCsv);
+$('backupJson').addEventListener('click',backupJson);
+$('restoreJson').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';await restoreJson(file)});
+$('printVehicle').addEventListener('click',()=>{const v=inventory.find(x=>x.id===editingId);if(v)printReportFor(v)});
+window.addEventListener('afterprint',()=>{$('printReport').hidden=true});
 document.querySelectorAll('[data-filter]').forEach(button=>button.addEventListener('click',()=>{
  activeFilter=button.dataset.filter;
  document.querySelectorAll('[data-filter]').forEach(x=>x.setAttribute('aria-pressed',String(x===button)));render()
 }));
-load();render();initIntake();
+buildInspection();load();render();initIntake();
 })();
