@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0a0f16"><meta name="color-scheme" content="dark">
+<title>Reseller Desk | Ravrent Mechanic</title><meta name="description" content="Private vehicle inventory, acquisition and reconditioning cost tracking, and reseller margin tools within Ravrent Mechanic.">
+<link rel="stylesheet" href="/reseller.css"></head>
+<body>
+<div class="shell">
+<header class="topbar"><a class="brand" href="/">RAVRENT <span>MECHANIC</span></a><nav aria-label="App navigation"><a href="/vin-report.html">VIN intelligence</a><a href="/toolkit.html">Inspections</a><a href="/">AI diagnostics</a></nav></header>
+<main>
+<section class="hero"><div class="eyebrow">RAVRENT / RESELLER DESK</div><div class="hero-layout"><div><h1>Vehicle inventory.<br><span>Real acquisition numbers.</span></h1><p>Track vehicles from first inspection to final sale. Calculate costs and projected margins from your own figures—without invented market valuations.</p></div><button id="addVehicle" class="primary big">+ Add vehicle</button></div></section>
+<section class="metrics" aria-label="Inventory overview">
+<div class="metric"><span>Vehicles</span><strong id="vehicleCount">0</strong><small>In your local inventory</small></div>
+<div class="metric"><span>Capital invested</span><strong id="capitalTotal">$0</strong><small>Acquired vehicles, entered costs</small></div>
+<div class="metric"><span>Projected gross profit</span><strong id="profitTotal">$0</strong><small>Unsold vehicles with asking prices</small></div>
+<div class="metric"><span>Recorded sold profit</span><strong id="soldTotal">$0</strong><small>Before taxes, overhead and financing</small></div>
+</section>
+<section class="panel inventory"><div class="panel-head"><div><div class="eyebrow">INVENTORY</div><h2>Vehicle pipeline</h2><p id="inventoryHint">Saved in this browser. Not synchronized to other devices.</p></div><div class="head-actions"><label class="searchbox"><span class="sr-only">Find a vehicle</span><input id="search" placeholder="Search VIN, model or notes"></label><button id="exportCsv" class="outline">Export CSV</button></div></div><div class="tabs" role="group" aria-label="Inventory stage"><button data-filter="all" aria-pressed="true">All</button><button data-filter="considering" aria-pressed="false">Researching</button><button data-filter="purchased" aria-pressed="false">Owned</button><button data-filter="reconditioning" aria-pressed="false">Reconditioning</button><button data-filter="listed" aria-pressed="false">Listed</button><button data-filter="sold" aria-pressed="false">Sold</button></div><div id="inventoryList" class="inventory-list" aria-live="polite"></div></section>
+<section class="footnote"><strong>What these figures mean</strong><p>All prices, conditions, mileage and expenses are user-entered. Profit is a basic estimate (sale price minus entered direct costs); it excludes unentered costs, taxes on profit, financing, warranties, overhead and other liabilities. VIN identification comes from NHTSA, not a paid title/accident/odometer history report.</p></section>
+</main>
+<footer>Ravrent Mechanic · Reseller tools · Local-only records</footer>
+</div>
+<dialog id="vehicleDialog" aria-labelledby="dialogTitle"><form id="vehicleForm" method="dialog" novalidate><header class="dialog-head"><div><div class="eyebrow">VEHICLE WORKSHEET</div><h2 id="dialogTitle">Add inventory vehicle</h2></div><button id="closeDialog" type="button" class="close" aria-label="Close form">×</button></header>
+<div class="form-body">
+<div class="group-title">Vehicle identity</div><div class="form-grid">
+<label>VIN (optional)<input id="formVin" maxlength="17" spellcheck="false" autocapitalize="characters" placeholder="17-character VIN"></label>
+<div class="lookup-cell"><button type="button" class="outline" id="lookupVin">Decode VIN</button><a href="/vin-report.html">Camera scanner</a></div>
+<label>Year<input id="formYear" type="number" inputmode="numeric" min="1900" max="2035" placeholder="2009"></label>
+<label>Make<input id="formMake" maxlength="60" placeholder="Lexus"></label>
+<label>Model<input id="formModel" maxlength="80" placeholder="IS 250"></label>
+<label>Trim / description<input id="formTrim" maxlength="100" placeholder="RWD, 2.5L V6"></label>
+<label>Odometer (miles)<input id="formMileage" type="number" min="0" max="9999999" inputmode="numeric" placeholder="158000"></label>
+<label>Stage<select id="formStage"><option value="considering">Researching</option><option value="purchased">Purchased</option><option value="reconditioning">Reconditioning</option><option value="listed">Listed</option><option value="sold">Sold</option></select></label>
+</div><p class="inline-status" id="decodeStatus" role="status"></p>
+<div class="group-title">Acquisition and reconditioning</div><p class="detail">Use real quoted or paid amounts. Blank amounts are treated as $0.</p><div class="form-grid cost-grid">
+<label>Purchase price ($)<input id="purchase" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Auction / buyer fees ($)<input id="buyerFees" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Transport ($)<input id="transport" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Parts ($)<input id="parts" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Labor ($)<input id="labor" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Detailing ($)<input id="detailing" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Title / registration / other fees ($)<input id="paperwork" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Other direct costs ($)<input id="other" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="0"></label>
+<label>Target asking price ($)<input id="asking" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="Leave blank if unknown"></label>
+<label>Final sale price ($)<input id="actualSale" type="number" min="0" max="100000000" step=".01" inputmode="decimal" placeholder="Only when sold"></label>
+</div>
+<div class="cost-summary"><div><span>Direct cost basis</span><strong id="formTotalCost">$0</strong></div><div><span id="formProfitLabel">Projected gross profit</span><strong id="formProfit">—</strong></div><div><span>Return on cost</span><strong id="formRoi">—</strong></div></div>
+<div class="group-title">Inspection and evidence</div><label>Known faults, inspection details, repair work and documents<textarea id="formNotes" rows="4" maxlength="3000" placeholder="P0171, transmission slipping, seller provided title, repair invoice number..."></textarea></label>
+<div class="warning-note">No automatic accident, salvage, odometer-history, lien or VIN-specific recall repair verification is available. Research all records before representing the vehicle as verified.</div>
+</div><div class="dialog-actions"><button id="deleteVehicle" type="button" class="danger" hidden>Delete vehicle</button><span id="formStatus" role="status"></span><button class="primary" type="submit">Save vehicle</button></div></form></dialog>
+<script defer src="/reseller.js"></script></body></html>
