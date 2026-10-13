@@ -30,7 +30,7 @@
  <header class="topbar"><div class="left-top">
  <button class="icon-btn mobile-menu" id="menuToggle" aria-label="Open menu"><svg class="svg" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
  <span class="wordmark" id="titleTop">Ravrent Mechanic</span><span class="beta">BETA</span></div>
- <div class="right-top"><button class="connection warning" id="connection" title="Assistant status" disabled>Checking status</button>
+ <div class="right-top"><button class="connection warning" id="connection" title="Open connection diagnostics" type="button">AI status</button>
  <button class="icon-btn" id="settingsButton" aria-label="About Ravrent Mechanic" title="About Ravrent Mechanic"><svg class="svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/></svg></button>
  <button class="icon-btn" id="newChatTop" aria-label="New chat" title="New chat"><svg class="svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div></header>
  <main class="workspace">
@@ -84,12 +84,14 @@
   <div id="wizardApp"><div class="empty"><h3>Preparing diagnostics…</h3></div></div>
   <div class="callout">These are general diagnostic checks, not a confirmed repair diagnosis. Stop driving for serious brake, steering, fuel leak, overheating, or electrical safety concerns.</div>
  </div></section>
- <section id="healthPane" class="section-content hide"><div class="section-inner">
-  <div class="section-header"><div><h1>System Diagnostics</h1><p>Check what works independently instead of assuming a green status means the AI is functioning.</p></div><button class="outline-btn" id="runHealth">Run checks</button></div>
-  <div id="healthResults" class="item-grid"><div class="item-card"><h3>Not checked yet</h3><p>Run checks to verify app storage, server connectivity and available diagnostic tools.</p></div></div>
-  <div class="callout">An installed API key does not prove the AI service can respond. A separate live AI test may consume API credits; automatic health checks do not.</div>
-  <div class="ai-check-actions"><button class="outline-btn" id="checkProvider" type="button">Check Google AI access</button><button class="outline-btn" id="runLiveAiTest" style="margin-top:15px">Test real AI response</button></div><p class="muted" id="providerCheckResult" role="status" style="margin-top:12px">The provider check tests server-key access without generating an AI response.</p>
-  <p class="muted" id="liveAiTestResult" role="status" style="margin-top:12px"></p>
+ <section id="healthPane" class="section-content hide"><div class="section-inner health-minimal">
+  <div class="section-header health-heading"><div><h1>Connection & Diagnostics</h1><p>One clear connection status, without the repeated cards.</p></div></div>
+  <div class="health-status" aria-live="polite"><span id="aiStateDot" class="health-dot status-unknown" aria-hidden="true"></span><div><strong id="aiConnectionHeadline">AI connection not verified</strong><p id="aiConnectionDetail">The app is available, but Google must approve a real AI request.</p></div></div>
+  <div class="health-actions"><button type="button" class="primary-btn" id="runLiveAiTest">Test AI connection</button><button type="button" class="outline-btn" id="runHealth">Check app systems</button></div>
+  <p class="health-feedback" id="liveAiTestResult" role="status"></p>
+  <div id="healthResults" class="health-list" aria-live="polite"><div class="health-row"><span>Application checks</span><small>Run Check app systems</small></div></div>
+  <details class="health-advanced" id="healthAdvanced"><summary>Technical details and connection setup</summary><div class="health-advanced-body"><p>The Google API key must allow requests from Ravrent's server. A configured key is not the same as an authorized key.</p><button type="button" class="outline-btn" id="checkProvider">Inspect Google API permissions</button><p class="health-feedback" id="providerCheckResult" role="status"></p>
+  <ol class="health-fix-steps"><li>Open Google AI Studio in your own browser and inspect the project's API key and access warnings.</li><li>Create a supported Gemini API key restricted to the Gemini API if the current key is blocked or outdated.</li><li>Replace the production <code>GEMINI_API_KEY</code> in Ravrent's existing Vercel project and redeploy.</li><li>Come back and tap Test AI connection to verify a real response. A blocked Google project requires Google's review.</li></ol><p>Keep API keys private. Never type a key into Ravrent's chat or a public issue.</p></div></details>
  </div></section>
  <section id="reportsPane" class="section-content hide"><div class="section-inner"><div class="section-header"><div><h1>Saved Reports</h1><p>Keep exportable histories of diagnostic conversations and source research.</p></div></div><div id="reportGrid" class="item-grid"></div></div></section>
  </main>
