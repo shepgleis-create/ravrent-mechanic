@@ -112,7 +112,7 @@ module.exports=async function handler(req,res){
       const reply=await callGroq({
         key:groqKey,contents,
         vehiclePrompt:system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle),
-        deep,requestedResearch,signal:controller.signal,
+        deep,requestedResearch,signal:controller.signal,fetcher:fetch,
         standardModel:process.env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile',
         visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'
       });
