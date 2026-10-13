@@ -244,6 +244,7 @@ $('formVin').addEventListener('input',()=>{$('formVin').value=$('formVin').value
 $('search').addEventListener('input',render);
 $('exportCsv').addEventListener('click',exportCsv);
 $('backupJson').addEventListener('click',backupJson);
+$('restoreButton').addEventListener('click',()=>$('restoreJson').click());
 $('restoreJson').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';await restoreJson(file)});
 $('printVehicle').addEventListener('click',()=>{const v=inventory.find(x=>x.id===editingId);if(v)printReportFor(v)});
 window.addEventListener('afterprint',()=>{$('printReport').hidden=true});
