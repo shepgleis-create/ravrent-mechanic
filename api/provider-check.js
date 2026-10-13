@@ -1,6 +1,6 @@
 // User-triggered, non-generating Gemini configuration check.
 // A successful models-list request validates basic key/project access, NOT inference quota or billing.
-const {classifyGoogleError}=require('./google-error');
+const {classifyGoogleError}=require('../lib/google-error');
 const attempts=new Map();
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
