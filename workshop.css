@@ -46,3 +46,5 @@
 .template-tools .outline{padding:11px 12px;font-size:12px;white-space:normal;min-height:45px}
 @media(max-width:930px){.template-tools{grid-template-columns:repeat(3,minmax(0,1fr))}.template-tools label{grid-column:1/-1}}
 @media(max-width:570px){.template-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.template-tools label{grid-column:1/-1}.template-tools #applyTemplate{grid-column:1/-1}.template-tools button{font-size:11px}}
+
+.template-tools input{width:100%;min-width:0;padding:11px 12px;border:1px solid #415667;border-radius:9px;color:#eaf2f7;background:#131e28;font:inherit}.template-tools{grid-template-columns:minmax(175px,1.2fr) minmax(145px,.9fr) repeat(3,minmax(88px,auto))}@media(max-width:930px){.template-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.template-tools label{grid-column:1/-1}}@media(max-width:570px){.template-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.template-tools label{grid-column:1/-1}}
