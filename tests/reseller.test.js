@@ -19,7 +19,7 @@ function start(intake=null){
  const get=name=>{if(!nodes.has(name))nodes.set(name,make(name));return nodes.get(name)};
  const document={getElementById:get,createElement:make,querySelectorAll:()=>[],body:{append(){}}};
  const storage=map=>({getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)});
- const context={document,localStorage:storage(stored),sessionStorage:storage(session),crypto:{randomUUID:()=>String(++id)},confirm:()=>true,Blob:class{},URL:{createObjectURL:()=>'',revokeObjectURL(){}},fetch:()=>{throw Error('No network expected')}};
+ const context={document,window:{addEventListener(){},print(){}},localStorage:storage(stored),sessionStorage:storage(session),crypto:{randomUUID:()=>String(++id)},confirm:()=>true,Blob:class{},URL:{createObjectURL:()=>'',revokeObjectURL(){}},fetch:()=>{throw Error('No network expected')}};
  vm.runInNewContext(source,context,{timeout:1200});
  const fire=(name,event)=>{for(const callback of get(name).listeners[event]||[])callback({preventDefault(){},target:{matches(){return true}}})};
  const saved=()=>JSON.parse(stored.get('ravrent_reseller_inventory_v1')||'[]');
