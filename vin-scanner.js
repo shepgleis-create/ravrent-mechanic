@@ -9,7 +9,7 @@ const weights=[8,7,6,5,4,3,2,10,0,9,8,7,6,5,4,3,2];
 const table={A:1,B:2,C:3,D:4,E:5,F:6,G:7,H:8,J:1,K:2,L:3,M:4,N:5,P:7,R:9,S:2,T:3,U:4,V:5,W:6,X:7,Y:8,Z:9};
 let stream=null,scanTimer=null,autoTimer=null,detector=null,scanning=false,reading=false,starting=false;
 let facing='environment',torch=false,ocrWorker=null,ocrPromise=null,libraryPromise=null;
-let autoReopen=false;
+let autoReopen=false,zxingReader=null,zxingPromise=null;
 function checksum(vin){
  if(!vinPattern.test(vin))return false;
  let sum=0;for(let i=0;i<17;i++){const val=/^[0-9]$/.test(vin[i])?Number(vin[i]):table[vin[i]];if(val===undefined)return false;sum+=val*weights[i]}
@@ -23,6 +23,7 @@ function candidates(text){
  return [...seen].sort((a,b)=>Number(checksum(b))-Number(checksum(a)))
 }
 function stopCamera({reason='stopped'}={}){
+ if(zxingReader){try{zxingReader.reset()}catch{}zxingReader=null}
  if(scanTimer){clearInterval(scanTimer);scanTimer=null}
  if(autoTimer){clearInterval(autoTimer);autoTimer=null}
  if(stream){stream.getTracks().forEach(track=>track.stop());stream=null}
@@ -45,6 +46,33 @@ function accept(vin,source,automatic=false){
   status('Possible VIN '+vin+' read from '+source+'. Verify every character and tap Decode VIN manually; checksum did not validate.')
  }
  return true
+}
+async function loadZXing(){
+ if(window.ZXing?.BrowserMultiFormatReader)return window.ZXing;
+ if(!zxingPromise)zxingPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement('script');script.async=true;
+  script.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
+  script.onload=()=>window.ZXing?.BrowserMultiFormatReader?resolve(window.ZXing):reject(Error('Barcode fallback not available'));
+  script.onerror=()=>reject(Error('Barcode reader could not load'));
+  document.head.append(script)
+ }).catch(e=>{zxingPromise=null;throw e});
+ return zxingPromise
+}
+async function startZXing(video){
+ try{
+  const library=await loadZXing();
+  if(!stream||!video?.srcObject)return;
+  zxingReader=new library.BrowserMultiFormatReader();
+  await zxingReader.decodeFromVideoElementContinuously(video,result=>{
+   if(!result||!stream)return;
+   const possible=candidates(result.getText());
+   const best=possible.find(checksum)||possible[0];
+   if(best)accept(best,'live barcode')
+  });
+  hint('Scanning supported VIN barcodes continuously. Printed VIN text can also be read with the OCR button.')
+ }catch{
+  if(stream)hint('Live camera ready. Automatic barcode recognition is unavailable here; tap Read VIN text to scan printed VIN characters.')
+ }
 }
 async function loadOCR(){
  if(window.Tesseract)return window.Tesseract;
@@ -114,13 +142,15 @@ async function startCamera({autostart=false}={}){
   status('Live camera active. Tap Read VIN text for printed VINs; barcode scanning runs automatically.');
   const track=active.getVideoTracks()[0],cap=track?.getCapabilities?.()||{};
   $('toggleTorch').disabled=!cap.torch;
+  let nativeBarcode=false;
   if(typeof window.BarcodeDetector!=='undefined'){
    try{
     const supported=await window.BarcodeDetector.getSupportedFormats();
     const formats=['code_39','code_128','pdf417','data_matrix'].filter(f=>supported.includes(f));
-    if(formats.length){detector=new window.BarcodeDetector({formats});scanTimer=setInterval(barcodeScan,550)}
+    if(formats.length){detector=new window.BarcodeDetector({formats});scanTimer=setInterval(barcodeScan,550);nativeBarcode=true}
    }catch{}
   }
+  if(!nativeBarcode)startZXing(video);
   if($('autoReadVin').checked)autoTimer=setInterval(()=>captureFrame({automatic:true}),5000);
  }catch{
   stopCamera({reason:'permission'});
