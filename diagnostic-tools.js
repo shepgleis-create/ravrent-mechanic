@@ -109,6 +109,18 @@ async function runChecks(){
  items.push(tile('Guided troubleshooting','Runs on this device even when the AI connection is unavailable.','READY'));
  box.innerHTML=items.join('');
 }
+async function checkProvider(){
+ const button=by('checkProvider'),out=by('providerCheckResult');if(!button||!out)return;
+ button.disabled=true;out.textContent='Checking the Google AI service and configured models…';
+ try{
+  const r=await fetch('/api/provider-check',{cache:'no-store'}),data=await r.json();
+  if(!r.ok)throw Error(data.error||'HTTP '+r.status);
+  if(data.status==='provider_access_ok'){
+   out.textContent='Server key accepted by Google. Standard model '+data.standardModel+(data.standardModelListed?' is listed.':' is not listed.')+' Deep model '+data.deepModel+(data.deepModelListed?' is listed.':' is not listed.')+' This does not verify an AI answer; run Test real AI response for that.';
+  }else out.textContent='AI provider check: '+(data.code||'UNKNOWN')+' — '+(data.message||'No available provider status.');
+ }catch(e){out.textContent='AI provider check failed: '+e.message}
+ finally{button.disabled=false}
+}
 async function liveTest(){
  const b=by('runLiveAiTest'),out=by('liveAiTestResult');if(!b||!out)return;
  b.disabled=true;out.textContent='Checking whether the assistant can actually answer…';
@@ -127,4 +139,5 @@ const active=()=>{
 document.querySelectorAll('[data-view="wizard"],[data-view="health"]').forEach(b=>b.addEventListener('click',()=>setTimeout(active,0)));
 by('runHealth')?.addEventListener('click',runChecks);
 by('runLiveAiTest')?.addEventListener('click',liveTest);
+by('checkProvider')?.addEventListener('click',checkProvider);
 })();
