@@ -1,6 +1,9 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'..','api','chat.js'),'utf8');
 const googleError=require('../lib/google-error');
+const groqProvider=require('../lib/groq-provider');
+const togetherProvider=require('../lib/together-provider');
+const usageMeter=require('../lib/usage-meter');
 function build(mode){
  const calls=[],mod={exports:{}};
  const mock=async (url,options)=>{
@@ -10,7 +13,7 @@ function build(mode){
   return {ok:false,status:403,json:async()=>({error:{message:mode==='invalid-key'?'API key not valid. Please pass a valid API key.':'Requested model does not exist or model access denied.'}})};
  };
  const handler=new Function('require','module','process','fetch','AbortController','setTimeout','clearTimeout','console','URL',source+';return module.exports')(
-  name=>name==='../lib/google-error'?googleError:{},mod,{env:{GEMINI_API_KEY:' test-secret ',...(mode==='model-permission'?{GEMINI_STANDARD_MODEL:'gemini-2.5-flash'}:{})}},
+  name=>name==='../lib/google-error'?googleError:name==='../lib/groq-provider'?groqProvider:name==='../lib/together-provider'?togetherProvider:name==='../lib/usage-meter'?usageMeter:{},mod,{env:{GEMINI_API_KEY:' test-secret ',...(mode==='model-permission'?{GEMINI_STANDARD_MODEL:'gemini-2.5-flash'}:{})}},
   mock,class{constructor(){this.signal={aborted:false}}abort(){this.signal.aborted=true}},()=>1,()=>{},
   {warn(){},error(){}},URL);
  return {handler,calls}
