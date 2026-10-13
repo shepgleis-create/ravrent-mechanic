@@ -13,6 +13,31 @@ function migrate(){const s=fresh();try{const old=JSON.parse(localStorage.getItem
  }}catch(e){}return s;}
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')||migrate();if(!Array.isArray(data.threads)||!Array.isArray(data.vehicles))data=migrate();}catch(e){data=migrate();}
 let pending=false,pendingPhoto='',pendingVideo=null,videoUploading=false,videoUploadId=0,view='diagnose',spinnerTimer=null,toastTimer=null;
+const cooldownKey='ravrent_provider_cooldown_v1';
+let cooldownUntil=0,cooldownTimer=null;
+try{const saved=Number(localStorage.getItem(cooldownKey));if(Number.isFinite(saved)&&saved>Date.now()&&saved<Date.now()+86400000)cooldownUntil=saved}catch{}
+function secondsLeft(){return Math.max(0,Math.ceil((cooldownUntil-Date.now())/1000))}
+function updateCooldownUI(){
+ const remaining=secondsLeft(),notice=$('cooldownNotice');
+ if(notice){
+  notice.classList.toggle('hide',remaining===0);
+  notice.textContent=remaining?'AI usage limit: retry in '+(remaining>=60?Math.ceil(remaining/60)+' minute(s)':remaining+' seconds')+'. Starting a new conversation does not reset the provider allowance.':'';
+ }
+ if($('sendButton'))$('sendButton').disabled=pending||videoUploading||remaining>0;
+ document.querySelectorAll('[data-retry]').forEach(b=>{b.disabled=remaining>0;b.title=remaining?'Wait until the provider quota resets':''});
+ if(remaining){
+  if(!cooldownTimer)cooldownTimer=setInterval(updateCooldownUI,1000);
+ }else{
+  if(cooldownTimer){clearInterval(cooldownTimer);cooldownTimer=null}
+  if(cooldownUntil){cooldownUntil=0;try{localStorage.removeItem(cooldownKey)}catch{}}
+ }
+}
+function recordCooldown(seconds){
+ const n=Number(seconds);if(!Number.isFinite(n)||n<=0)return;
+ cooldownUntil=Date.now()+Math.min(86400,Math.ceil(n))*1000;
+ try{localStorage.setItem(cooldownKey,String(cooldownUntil))}catch{}
+ updateCooldownUI();
+}
 function store(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){notify('Local storage is full. Delete older conversations.');}}
 if(data.budgetProfileVersion!==1){
  // Earlier versions turned expensive deep research on automatically.
