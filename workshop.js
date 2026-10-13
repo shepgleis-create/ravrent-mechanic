@@ -112,7 +112,7 @@ function fill(v){
 }
 function open(record=null){
  editing=record?.id||null;fill(record);
- $('quoteTitle').textContent=record?'Edit '+record.number:'New customer estimate';
+ $('quoteTitle').textContent=editing?'Edit '+record.number:'New customer estimate';
  $('deleteQuote').hidden=!record;$('duplicateQuote').hidden=!record;$('printQuote').hidden=!record;
  $('quoteFeedback').textContent='';
  $('quoteDialog').showModal()
@@ -261,5 +261,18 @@ $('backupQuotes').addEventListener('click',backup);
 $('restoreQuotesButton').addEventListener('click',()=>$('restoreQuotes').click());
 $('restoreQuotes').addEventListener('change',async event=>{const file=event.target.files?.[0];event.target.value='';await restore(file)});
 window.addEventListener('afterprint',()=>{$('workshopPrint').hidden=true});
-load();render();
+function openIntake(){
+ try{
+  const raw=sessionStorage.getItem('ravrent_workshop_intake_v1');if(!raw)return;
+  sessionStorage.removeItem('ravrent_workshop_intake_v1');
+  const data=JSON.parse(raw);
+  const vin=String(data?.vin||'').toUpperCase();
+  if(vin&&!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin))return;
+  const vehicle=text(data?.vehicle,160);
+  if(!vehicle&&!vin)return;
+  open({customerVehicle:vehicle,quoteVin:vin,quoteStage:'draft',items:[{kind:'labor',description:'Diagnosis / inspection (enter actual work)',quantity:1,unitPrice:0,internalCost:0,taxable:false}]});
+  $('quoteFeedback').textContent='Vehicle carried over from VIN research. Enter shop, customer and actual prices before saving.'
+ }catch{}
+}
+load();render();openIntake();
 })();
