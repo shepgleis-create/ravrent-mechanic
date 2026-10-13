@@ -1,7 +1,15 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),core=window.RavrentWorkshopCore;
 if(!core)return;
-const KEY='ravrent_workshop_estimates_v1',STAGES={draft:'Draft',quoted:'Quoted',approved:'Customer approved',progress:'In progress',completed:'Completed'};
+const KEY='ravrent_workshop_estimates_v1',TEMPLATE_KEY='ravrent_workshop_templates_v1',STAGES={draft:'Draft',quoted:'Quoted',approved:'Customer approved',progress:'In progress',completed:'Completed'};
+const defaultTemplates=[
+ {id:'general-diagnostic',name:'General diagnostic appointment',items:[{kind:'labor',description:'Vehicle symptom diagnosis and measurements',quantity:1,unitPrice:0,internalCost:0,taxable:false}]},
+ {id:'oil-service',name:'Oil and filter service',items:[{kind:'labor',description:'Oil and filter service labor',quantity:1,unitPrice:0,internalCost:0,taxable:false},{kind:'part',description:'Manufacturer-specified engine oil',quantity:1,unitPrice:0,internalCost:0,taxable:true},{kind:'part',description:'Correct engine oil filter',quantity:1,unitPrice:0,internalCost:0,taxable:true}]},
+ {id:'brake-inspection',name:'Brake system inspection',items:[{kind:'labor',description:'Brake inspection and measurements',quantity:1,unitPrice:0,internalCost:0,taxable:false}]},
+ {id:'charging-test',name:'Battery and charging test',items:[{kind:'labor',description:'Battery and charging system diagnosis',quantity:1,unitPrice:0,internalCost:0,taxable:false}]},
+ {id:'used-car-inspection',name:'Used vehicle purchase inspection',items:[{kind:'labor',description:'Pre-purchase vehicle inspection',quantity:1,unitPrice:0,internalCost:0,taxable:false},{kind:'labor',description:'Stored code and readiness review',quantity:1,unitPrice:0,internalCost:0,taxable:false}]}
+];
+let customTemplates=[];
 const flds=['shopName','shopContact','customerName','customerContact','customerVehicle','quoteVin','quoteMiles','quoteStage','quoteTax','quoteDiscount','quoteDeposit','quoteExpiry','quoteNotes','quoteTerms'];
 const usd=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:2});
 const compact=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
@@ -55,6 +63,66 @@ function addItem(record={}){
  totals();return container
 }
 function renumber(){linesUI().forEach((el,i)=>el.querySelector('.line-index').textContent='ITEM '+(i+1))}
+function sanitizeTemplateItems(items){
+ if(!Array.isArray(items)||!items.length||items.length>40)return null;
+ const out=items.map(item=>({
+  kind:['labor','part','fee'].includes(item?.kind)?item.kind:'labor',
+  description:text(item?.description,160),
+  quantity:text(item?.quantity??1,16),unitPrice:text(item?.unitPrice??0,22),
+  internalCost:text(item?.internalCost??0,22),taxable:item?.taxable===true
+ }));
+ if(out.some(item=>!item.description||!Number.isFinite(Number(item.quantity))||Number(item.quantity)<=0||Number(item.quantity)>10000||!Number.isFinite(Number(item.unitPrice))||Number(item.unitPrice)<0||!Number.isFinite(Number(item.internalCost))||Number(item.internalCost)<0))return null;
+ return out
+}
+function loadTemplates(){
+ try{const saved=JSON.parse(localStorage.getItem(TEMPLATE_KEY)||'[]');
+  customTemplates=Array.isArray(saved)?saved.filter(v=>v&&typeof v.id==='string'&&typeof v.name==='string'&&sanitizeTemplateItems(v.items)).slice(0,25):[]
+ }catch{customTemplates=[]}
+}
+function persistTemplates(){
+ try{localStorage.setItem(TEMPLATE_KEY,JSON.stringify(customTemplates));return true}catch{return false}
+}
+function renderTemplates(){
+ const picker=$('templateSelect');picker.replaceChildren();
+ const blank=make('option','','Choose a preset or saved service');blank.value='';picker.append(blank);
+ for(const template of defaultTemplates){
+  const option=make('option','',template.name+' · No preset pricing');option.value='built:'+template.id;picker.append(option)
+ }
+ for(const template of customTemplates){
+  const option=make('option','',template.name+' · Saved by shop');option.value='custom:'+template.id;picker.append(option)
+ }
+ picker.value=''
+}
+function selectTemplate(){
+ const key=get('templateSelect');
+ const selected=key.startsWith('built:')?defaultTemplates.find(x=>x.id===key.slice(6)):key.startsWith('custom:')?customTemplates.find(x=>x.id===key.slice(7)):null;
+ if(!selected){$('quoteFeedback').textContent='Choose a service template first.';return}
+ if(linesUI().some(line=>line.querySelector('[data-field="description"]')?.value?.trim())&&!confirm('Replace existing estimate items with this template? Unsaved line items will be lost.'))return;
+ $('quoteLines').replaceChildren();
+ for(const item of selected.items)addItem(item);
+ renumber();totals();
+ $('quoteFeedback').textContent='Template inserted. Verify labor hours, part compatibility and all prices before quoting.'
+}
+function saveCustomTemplate(){
+ const lines=sanitizeTemplateItems(readLines());
+ if(!lines){$('quoteFeedback').textContent='Add valid descriptions and quantities before saving a template.';return}
+ if(customTemplates.length>=25){$('quoteFeedback').textContent='This browser already has 25 custom templates.';return}
+ const name=String(prompt('Name this reusable service template (no customer details):')||'').trim().slice(0,70);
+ if(!name)return;
+ if(customTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase())){$('quoteFeedback').textContent='A template with this name already exists.';return}
+ const old=[...customTemplates];
+ customTemplates.push({id:id(),name,items:lines});
+ if(!persistTemplates()){customTemplates=old;$('quoteFeedback').textContent='Could not save template in browser storage.';return}
+ renderTemplates();$('quoteFeedback').textContent='Template saved on this browser. Create an inventory backup to keep a copy.'
+}
+function deleteCustomTemplate(){
+ const key=get('templateSelect');if(!key.startsWith('custom:')){$('quoteFeedback').textContent='Only shop-created templates can be removed.';return}
+ const found=customTemplates.find(x=>x.id===key.slice(7));if(!found)return;
+ if(!confirm('Remove the reusable template "'+found.name+'"?'))return;
+ const before=customTemplates;customTemplates=customTemplates.filter(x=>x.id!==found.id);
+ if(!persistTemplates()){customTemplates=before;$('quoteFeedback').textContent='Unable to remove template.';return}
+ renderTemplates();$('quoteFeedback').textContent='Template removed.'
+}
 function readLines(){
  return linesUI().map(line=>{
   const v=name=>line.querySelector('[data-field="'+name+'"]');
@@ -93,7 +161,7 @@ function validate(v){
   const qty=Number(item.quantity),price=Number(item.unitPrice),cost=Number(item.internalCost);
   if(!Number.isFinite(qty)||qty<=0||qty>10000||!Number.isFinite(price)||price<0||price>1000000||!Number.isFinite(cost)||cost<0||cost>1000000)return 'Item quantity, rates and unit costs must be valid nonnegative amounts.';
  }
- try{calculate(v)}catch(e){return e.message||'Invalid estimate totals'}
+ try{const totals=calculate(v);if(v.quoteStage!=='draft'&&totals.beforeTax<=0)return 'Enter a real priced line item before marking a quote as issued or approved.'}catch(e){return e.message||'Invalid estimate totals'}
  return ''
 }
 function savedShop(){
@@ -178,7 +246,7 @@ function exportCsv(){
 }
 function backup(){
  if(!records.length){notify('No estimates to back up.');return}
- const data={app:'ravrent-mechanic',format:'workshop-estimates',version:1,exported:new Date().toISOString(),records};
+ const data={app:'ravrent-mechanic',format:'workshop-estimates',version:1,exported:new Date().toISOString(),records,templates:customTemplates};
  download('ravrent-workshop-backup-'+date()+'.json',JSON.stringify(data,null,2),'application/json');
  notify('Workshop backup downloaded. Keep it secure: it may contain customer information.')
 }
@@ -197,6 +265,7 @@ async function restore(file){
   if(!confirm('Restore '+added.length+' additional estimates? Existing records will not be overwritten.'))return;
   const previous=records;records=[...added,...records];
   if(!saveStorage()){records=previous;throw Error('Unable to save the imported records.')}
+  if(Array.isArray(data.templates)){const names=new Set(customTemplates.map(t=>t.name.toLowerCase()));const available=25-customTemplates.length;const newTemplates=data.templates.filter(t=>t&&typeof t.name==='string'&&t.name.length<=70&&sanitizeTemplateItems(t.items)&&!names.has(t.name.toLowerCase())).slice(0,Math.max(0,available));if(newTemplates.length){const existing=customTemplates;customTemplates=[...existing,...newTemplates.map(t=>({id:id(),name:t.name,items:sanitizeTemplateItems(t.items)}))];if(!persistTemplates())customTemplates=existing;renderTemplates()}}
   render();notify(added.length+' estimates restored without overwriting existing records.')
  }catch(e){notify('Restore failed: '+(e.message||'Invalid file'))}
 }
@@ -231,6 +300,9 @@ function printEstimate(quote){
  try{window.print()}catch{notify('Print is not available here. Use the browser Print or Save as PDF feature.')}
 }
 $('createQuote').addEventListener('click',()=>open());
+$('applyTemplate').addEventListener('click',selectTemplate);
+$('saveTemplate').addEventListener('click',saveCustomTemplate);
+$('deleteTemplate').addEventListener('click',deleteCustomTemplate);
 $('closeQuote').addEventListener('click',()=>$('quoteDialog').close());
 $('addLine').addEventListener('click',()=>{if(linesUI().length>=40){$('quoteFeedback').textContent='Maximum 40 items per quote.';return}addItem({kind:'part',quantity:1});renumber()});
 $('quoteForm').addEventListener('submit',event=>{event.preventDefault();persistForm()});
@@ -274,5 +346,5 @@ function openIntake(){
   $('quoteFeedback').textContent='Vehicle carried over from VIN research. Enter shop, customer and actual prices before saving.'
  }catch{}
 }
-load();render();openIntake();
+loadTemplates();renderTemplates();load();render();openIntake();
 })();
