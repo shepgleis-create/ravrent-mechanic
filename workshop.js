@@ -107,13 +107,13 @@ function saveCustomTemplate(){
  const lines=sanitizeTemplateItems(readLines());
  if(!lines){$('quoteFeedback').textContent='Add valid descriptions and quantities before saving a template.';return}
  if(customTemplates.length>=25){$('quoteFeedback').textContent='This browser already has 25 custom templates.';return}
- const name=String(prompt('Name this reusable service template (no customer details):')||'').trim().slice(0,70);
- if(!name)return;
+ const name=get('templateName').slice(0,70);
+ if(!name){$('quoteFeedback').textContent='Enter a reusable service template name above.';return}
  if(customTemplates.some(t=>t.name.toLowerCase()===name.toLowerCase())){$('quoteFeedback').textContent='A template with this name already exists.';return}
  const old=[...customTemplates];
  customTemplates.push({id:id(),name,items:lines});
  if(!persistTemplates()){customTemplates=old;$('quoteFeedback').textContent='Could not save template in browser storage.';return}
- renderTemplates();$('quoteFeedback').textContent='Template saved on this browser. Create an inventory backup to keep a copy.'
+ renderTemplates();$('templateName').value='';$('quoteFeedback').textContent='Template saved on this browser. Create an inventory backup to keep a copy.'
 }
 function deleteCustomTemplate(){
  const key=get('templateSelect');if(!key.startsWith('custom:')){$('quoteFeedback').textContent='Only shop-created templates can be removed.';return}
