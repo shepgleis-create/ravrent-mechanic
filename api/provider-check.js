@@ -2,6 +2,7 @@
 // A successful models-list request validates basic key/project access, NOT inference quota or billing.
 const {classifyGoogleError}=require('../lib/google-error');
 const {checkGroqModels}=require('../lib/groq-provider');
+const {checkTogetherModels}=require('../lib/together-provider');
 const attempts=new Map();
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -9,11 +10,14 @@ module.exports=async function handler(req,res){
  if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'GET required',code:'METHOD'})}
  const key=String(process.env.GEMINI_API_KEY||'').trim();
  const groqKey=String(process.env.GROQ_API_KEY||'').trim();
+ const togetherKey=String(process.env.TOGETHER_API_KEY||'').trim();
  const choice=String(process.env.AI_PROVIDER||'auto').toLowerCase();
- const useGroq=choice==='groq'||(choice!=='gemini'&&Boolean(groqKey));
+ const useTogether=choice==='together'||(choice==='auto'&&!groqKey&&Boolean(togetherKey));
+ const useGroq=!useTogether&&(choice==='groq'||(choice!=='gemini'&&Boolean(groqKey)));
  if(process.env.AI_REQUESTS_ENABLED==='false')return res.status(200).json({status:'paused',code:'OWNER_PAUSED',message:'AI has been paused by the project owner.'});
+ if(useTogether&&!togetherKey)return res.status(200).json({status:'not_configured',code:'MISSING_TOGETHER_KEY',message:'Together AI is selected but TOGETHER_API_KEY is missing.'});
  if(useGroq&&!groqKey)return res.status(200).json({status:'not_configured',code:'MISSING_GROQ_KEY',message:'Groq selected but GROQ_API_KEY is missing.'});
- if(!useGroq&&!key)return res.status(200).json({status:'not_configured',code:'MISSING_KEY',message:'No AI provider key is configured.'});
+ if(!useGroq&&!useTogether&&!key)return res.status(200).json({status:'not_configured',code:'MISSING_KEY',message:'No AI provider key is configured.'});
  const ip=String(req.headers?.['x-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].slice(0,80);
  const now=Date.now(),counter=attempts.get(ip)||{since:now,count:0};
  if(now-counter.since>60000){counter.since=now;counter.count=0}
@@ -21,6 +25,13 @@ module.exports=async function handler(req,res){
  if(attempts.size>400)for(const [k,v] of attempts)if(now-v.since>60000)attempts.delete(k);
  if(counter.count>5)return res.status(429).json({status:'rate_limited',code:'LOCAL_LIMIT',message:'Wait a minute before checking again.'});
  const c=new AbortController(),timer=setTimeout(()=>c.abort(),9000);
+ if(useTogether){
+  try{
+   const state=await checkTogetherModels({key:togetherKey,signal:c.signal,fetcher:fetch,model:process.env.TOGETHER_MODEL||'Qwen/Qwen3.8-Flash'});
+   return res.status(200).json(state)
+  }catch{return res.status(200).json({status:'unknown',provider:'Together AI',code:'PROVIDER_NETWORK',message:'Cannot check Together AI model listing.'})}
+  finally{clearTimeout(timer)}
+ }
  if(useGroq){
   try{
    const result=await checkGroqModels({key:groqKey,signal:c.signal,fetcher:fetch,
