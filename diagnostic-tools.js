@@ -132,7 +132,8 @@ async function checkProvider(){
   if(data.status==='provider_access_ok'){
    const matching=data.standardModelListed&&data.deepModelListed;
    out.textContent='Google accepted model listing. '+(matching?'Both configured models are listed.':'At least one configured model is not available.')+' Run Test AI connection to verify actual generation.';
-   updateAIState(false,'UNVERIFIED','Google permits model listing, but a successful AI response has not been demonstrated.');
+   let recentSuccess=false;try{const saved=JSON.parse(localStorage.getItem(aiStatusKey)||'null');recentSuccess=!!saved?.ok&&Number.isFinite(saved.time)&&Date.now()-saved.time<10*60*1000}catch{}
+   if(!recentSuccess)updateAIState(false,'UNVERIFIED','Google permits model listing, but a successful AI response has not been demonstrated.');
   }else{
    const message=data.message||'Provider access failed.';
    out.textContent=(data.code||'PROVIDER')+': '+message;
@@ -178,7 +179,7 @@ try{
 const active=()=>{
  const wizard=by('wizardPane'),health=by('healthPane');
  if(wizard&&!wizard.classList.contains('hide'))render();
- if(health&&!health.classList.contains('hide')&&!health.dataset.checked){health.dataset.checked='yes';runChecks();}
+ if(health&&!health.classList.contains('hide')&&!health.dataset.checked){health.dataset.checked='yes';runChecks();checkProvider();}
 };
 document.querySelectorAll('[data-view="wizard"],[data-view="health"]').forEach(b=>b.addEventListener('click',()=>setTimeout(active,0)));
 by('runHealth')?.addEventListener('click',runChecks);
