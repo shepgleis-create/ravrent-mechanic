@@ -1,9 +1,10 @@
 // Ravrent Mechanic diagnostic research API (private beta).
 // No Gemini key is ever returned to the browser.
 const crypto = require('node:crypto');
+const {classifyGoogleError}=require('./google-error');
 const attempts = new Map();
 let searchPausedUntil = 0;
-const MAX_HISTORY = 18;
+const MAX_HISTORY = 14;
 function takeSlot(id) {
  const now=Date.now(), day=24*60*60*1000, row=attempts.get(id)||{start:now,n:0,dayStart:now,daily:0};
  if(now-row.start>60000){row.start=now;row.n=0;}
@@ -46,9 +47,9 @@ function userParts(m) {
   }
   return parts;
 }
-function conversation(messages) {
+function conversation(messages,deep=false) {
   const out=[];
-  for(const m of messages.slice(-MAX_HISTORY)){
+  for(const m of messages.slice(-(deep?MAX_HISTORY:9))){
     if(!m||typeof m!=='object'||!['assistant','user'].includes(m.role))continue;
     if(m.role==='user'){
       out.push({role:'user',parts:userParts(m)});
@@ -66,26 +67,17 @@ function conversation(messages) {
   return out;
 }
 const system = [
-'You are Ravrent Mechanic, an elite automotive diagnostics and repair research assistant, not a canned chatbot.',
-'Your job is to use all available evidence and explain a methodical differential diagnosis with high mechanical accuracy.',
-'Be genuinely conversational. Respond to the user’s latest question in context; do not repeat the same boilerplate list.',
-'Think through evidence internally. Do not present hidden chain-of-thought. Give a concise, useful diagnostic rationale.',
-'For a substantive fault: provide (a) risk / safe-to-drive recommendation, (b) 2–5 plausible causes ranked by fit to symptoms,',
-'(c) specific signs that support / contradict each possibility, (d) inexpensive safe verification tests ordered by information gained,',
-'(e) what the test outcomes mean and recommended repair options, (f) 1–3 targeted follow-up questions.',
-'For a simple question or a follow-up with already known facts, answer directly rather than rigidly using a template.',
-'Do not invent fault percentages, test results, code definitions, safety ratings, torque specifications, wiring, TSBs, recalls, prices or part fits.',
-'Use manufacturer service information, NHTSA, OEM bulletins and authoritative automotive sources when Google Search supplies them.',
-'When you use web research, distinguish sourced statements from your inference and include readable citations if available.',
-'Never claim to have researched online if the API did not supply search grounding.',
-'Interpret OBD codes as system and circuit clues, not automatic replacement recommendations. Compare live data only when supplied.',
-'If the driver says the car has weak brakes, loss of steering, fuel leakage, overheating, smoke, flashing check engine light,',
-'or severe loss of power, advise stopping safely and seeking qualified repair or towing.',
-'Avoid hazardous repair steps for high-voltage systems, airbags, refrigerants, pressurized fuel, or working under unsafe supports.',
-'Video input may include visible motion AND recorded sound. Identify what can genuinely be seen and heard, including timestamps when useful; do not equate a recorded sound with a confirmed mechanical fault. There is no actual scanner data or physical inspection unless supplied.',
-'User-maintained garage/service data may be inaccurate. Treat it as reported history, not independently verified facts.',
-'Keep responses clear and appropriately detailed; precise checks before buying parts. Use Markdown headings and tables sparingly.'
-].join('\n');
+'You are Ravrent Mechanic, an expert automotive diagnostic assistant. Answer in the context of the exact vehicle, mileage, codes, symptoms, and prior tests supplied.',
+'Clearly distinguish observed evidence, user reports, general patterns, and unverified hypotheses. Never invent tests, DTC definitions, recall status, fitment, repair prices or verified repairs.',
+'Prioritize safety: for dangerous braking, steering, fuel leaks, smoke, severe overheating, flashing check engine lamps, high-voltage hazards or major electrical failures, advise stopping safely and getting professional help.',
+'When investigating a fault, rank a short differential diagnosis by evidence. For each cause give supporting or contradicting clues and an inexpensive, safe next test with expected outcomes.',
+'Prefer electrical, mechanical and live-data verification to replacing sensors on the basis of codes. Explain the next best test first. Interpret codes as system clues, not proof of a failed part.',
+'Ask at most two targeted follow-up questions if details are insufficient, or answer directly if enough information is present. Do not repeat generic boilerplate.',
+'If actual readings, measurements or video are not provided, say so. For video, distinguish sounds and visuals from mechanical conclusions.',
+'Never give unsupported safety-critical torque, refrigerant, airbag, high-voltage or pressurized-fuel instructions. Refer to verified vehicle-specific service material.',
+'Only cite web sources if grounding metadata was returned; never invent citations. Distinguish general knowledge from current manufacturer information.',
+'Keep the answer technically useful but concise. For complex cases use: immediate risk, ranked causes, next tests, and when a shop is necessary.'
+].join('\\n');
 function usableUrl(s) {try{const u=new URL(s);return u.protocol==='https:'&&u.hostname.length>3?u.href:null;}catch{return null;}}
 module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
@@ -106,7 +98,7 @@ module.exports=async function handler(req,res){
   if(!Array.isArray(body.messages)||!body.messages.length||body.messages.length>60)
     return res.status(400).json({error:'The conversation is missing or too long.',code:'BAD_INPUT'});
   let contents;
-  try{contents=conversation(body.messages);}
+  try{contents=conversation(body.messages,body.deep===true);}
   catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':err.message==='INVALID_VIDEO'?'That video is unavailable or expired. Upload it again to continue.':'Conversation format is invalid.',code:'BAD_INPUT'});}
   const deep=body.deep===true,requestedResearch=body.research===true;
   const model=deep?(process.env.GEMINI_MODEL||'gemini-2.5-flash'):(process.env.GEMINI_STANDARD_MODEL||'gemini-2.5-flash-lite');
@@ -119,8 +111,8 @@ module.exports=async function handler(req,res){
     const config={
       ...base,
       generationConfig:{
-        maxOutputTokens:effort==='HIGH'?8500:effort==='MEDIUM'?5600:3600,
-        thinkingConfig:{thinkingBudget:effort==='HIGH'?2048:effort==='MEDIUM'?768:0,includeThoughts:false}
+        maxOutputTokens:effort==='HIGH'?4500:effort==='MEDIUM'?3100:2200,
+        thinkingConfig:{thinkingBudget:effort==='HIGH'?1200:effort==='MEDIUM'?480:0,includeThoughts:false}
       },
       ...(grounded?{tools:[{google_search:{}}]}:{})
     };
@@ -130,10 +122,11 @@ module.exports=async function handler(req,res){
       body:JSON.stringify(config)
     });
     if(!response.ok){
-      let reason='';
-      try{const errBody=await response.json();reason=asText(errBody?.error?.message,400);}catch(e){}
-      console.warn('RAVRENT_AI_REQUEST_FAILED',{status:response.status,model:whichModel,grounded,reason:reason.slice(0,150)});
-      return {ok:false,status:response.status,reason};
+      let errorBody={};
+      try{errorBody=await response.json();}catch(e){}
+      const cause=classifyGoogleError(response.status,errorBody);
+      console.warn('RAVRENT_AI_REQUEST_FAILED',{status:response.status,code:cause.code,model:whichModel,grounded});
+      return {ok:false,status:response.status,cause};
     }
     return {ok:true,json:await response.json(),model:whichModel,grounded};
   }
@@ -144,7 +137,7 @@ module.exports=async function handler(req,res){
     const wantSearch=requestedResearch&&Date.now()>=searchPausedUntil;
     if(wantSearch){
       result=await generate(model,true,deep?'HIGH':'MEDIUM');
-      if(!result.ok&&(result.status===429||result.status===400||result.status===403)){
+      if(!result.ok&&(result.status===429||result.status===400)){
         searchPausedUntil=Date.now()+20*60*1000;
         usedFallback=true;
         if(!controller.signal.aborted)result=await generate(model,false,deep?'MEDIUM':'LOW');
@@ -155,32 +148,17 @@ module.exports=async function handler(req,res){
     }
     // If the main model's allowance is exhausted, try a separately provisioned,
     // lower-cost model once. No silent template responses.
-    if(result&&!result.ok&&(result.status===429||((result.status===403||result.status===404)&&/model|not supported|not found/i.test(result.reason||'')))&&!controller.signal.aborted&&model!=='gemini-2.5-flash-lite'){
+    if(result&&!result.ok&&(result.status===429||result.cause?.code==='AI_MODEL_ACCESS'||result.cause?.code==='AI_MODEL')&&!controller.signal.aborted&&model!=='gemini-2.5-flash-lite'){
       usedFallback=true;
       result=await generate('gemini-2.5-flash-lite',false,'LOW');
     }
     if(!result?.ok){
       const status=result?.status||502;
       if(status===429)return res.status(503).json({error:'The assistant is at its current usage limit. Please try again later.',code:'AI_QUOTA'});
-      if(status===401||status===403){
-        // Only return a safe classification, never raw provider text or key data.
-        const reason=String(result.reason||'');
-        const cls=/api[\s_-]?key.{0,80}(invalid|expired|not valid)|invalid.{0,50}api[\s_-]?key|api_key_invalid/i.test(reason)?'AI_KEY_INVALID':
-          /service.disabled|api.+not.+enabled|generativelanguage.googleapis.com.+disabled/i.test(reason)?'AI_API_DISABLED':
-          /referrer|ip address|api.?key.+restricted|request.+blocked/i.test(reason)?'AI_KEY_RESTRICTED':
-          /billing|payment|required.+bill/i.test(reason)?'AI_BILLING':
-          /model.{0,120}(permission|denied|not found|access)|permission.{0,120}model|cannot access.{0,100}model/i.test(reason)?'AI_MODEL_ACCESS':'AI_AUTH';
-        const details={
-          AI_KEY_INVALID:'The Google AI API key is invalid or expired. The app owner needs to replace GEMINI_API_KEY in Vercel.',
-          AI_API_DISABLED:'The Google Generative Language API is not enabled for the server key’s project.',
-          AI_KEY_RESTRICTED:'The server key has restrictions that block this Vercel deployment.',
-          AI_BILLING:'Google AI access for this project is blocked by billing or project payment requirements.',
-          AI_MODEL_ACCESS:'The server key does not have permission to use the configured Gemini model.',
-          AI_AUTH:'Google AI rejected the request. The app owner needs to verify API key validity, project permissions and restrictions.'
-        };
-        return res.status(503).json({error:details[cls],code:cls});
+      if(status===401||status===403||status===400||status===404){
+        const issue=result.cause||{code:'AI_PROVIDER_ERROR',action:'Check Google AI project access.'};
+        return res.status(503).json({error:issue.action,code:issue.code});
       }
-      if(status===404)return res.status(503).json({error:'The configured AI model is not available to this project. The app owner must update the model setting.',code:'AI_MODEL'});
       return res.status(503).json({error:'The assistant could not complete this request. Please try again.',code:'AI_REQUEST'});
     }
     const json=result.json,candidate=json.candidates?.[0];
