@@ -1,5 +1,6 @@
 // User-triggered, non-generating Gemini configuration check.
 // A successful models-list request validates basic key/project access, NOT inference quota or billing.
+const {classifyGoogleError}=require('./google-error');
 const attempts=new Map();
 module.exports=async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -22,23 +23,9 @@ module.exports=async function handler(req,res){
    signal:c.signal,headers:{'x-goog-api-key':key,Accept:'application/json'}
   });
   if(!upstream.ok){
-   let reason='';try{reason=String((await upstream.json())?.error?.message||'').slice(0,300)}catch{}
-   const code=upstream.status===429?'GOOGLE_QUOTA':
-    /api[\s_-]?key.{0,80}(invalid|expired|not valid)|invalid.{0,50}api[\s_-]?key|api_key_invalid/i.test(reason)?'GOOGLE_KEY_INVALID':
-    /service.disabled|api.+not.+enabled|generativelanguage.googleapis.com.+disabled/i.test(reason)?'GOOGLE_API_DISABLED':
-    /referrer|ip address|restricted|blocked/i.test(reason)?'GOOGLE_KEY_RESTRICTED':
-    upstream.status===401||upstream.status===403?'GOOGLE_PERMISSION':
-    upstream.status===404?'GOOGLE_ENDPOINT':'GOOGLE_SERVICE';
-   const messages={
-    GOOGLE_QUOTA:'Google rejected this check due to a rate or project limit.',
-    GOOGLE_KEY_INVALID:'The server API key is invalid or expired. Replace it in Vercel.',
-    GOOGLE_API_DISABLED:'The Google Generative Language API is disabled for this key’s project.',
-    GOOGLE_KEY_RESTRICTED:'The API key restrictions block this server request.',
-    GOOGLE_PERMISSION:'Google denied access. Check the API key, project and permissions.',
-    GOOGLE_ENDPOINT:'The Google model-list endpoint was not found.',
-    GOOGLE_SERVICE:'The Google AI service did not accept this check.'
-   };
-   return res.status(200).json({status:'failed',code,message:messages[code]})
+   let errorBody={};try{errorBody=await upstream.json()}catch{}
+   const issue=classifyGoogleError(upstream.status,errorBody);
+   return res.status(200).json({status:'failed',code:issue.code,message:issue.action,providerStatus:issue.providerStatus})
   }
   const body=await upstream.json();if(!Array.isArray(body.models))throw Error('INVALID_PROVIDER_RESPONSE');
   const supported=new Set(body.models.filter(x=>Array.isArray(x.supportedGenerationMethods)&&x.supportedGenerationMethods.includes('generateContent')).map(x=>String(x.name||'').replace(/^models\//,'')));
