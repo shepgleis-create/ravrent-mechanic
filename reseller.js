@@ -45,7 +45,7 @@ function render(){
   left.append(stage,title,meta);
   const nums=el('div','numbers');
   const cost=sumCost(v),sale=saleValue(v);
-  for(const [name,amount] of [['Direct costs',fmt(cost)],[v.stage==='sold'?'Sale amount':'Target sale',sale===null?'Not entered':fmt(sale)],['Gross '+(v.stage==='sold'?'profit':'margin'),sale===null?'—':fmt(sale-cost)]]){
+  for(const [name,amount] of [['Direct costs',fmt(cost)],[v.stage==='sold'?'Sale amount':'Target sale',sale===null?'Not entered':fmt(sale)],['Gross '+(v.stage==='sold'?'profit':'projected profit'),sale===null?'—':fmt(sale-cost)]]){
    const cell=el('div'),key=el('span','',name),val=el('strong','',amount);
    if(name.startsWith('Gross')&&sale!==null)val.className=sale-cost>=0?'profit-positive':'profit-negative';
    cell.append(key,val);nums.append(cell)
@@ -115,7 +115,7 @@ function save(){
  const duplicate=inventory.find(x=>v.vin&&x.vin===v.vin&&x.id!==editingId);
  if(duplicate){$('formStatus').textContent='This VIN is already in inventory. Open its existing worksheet.';return}
  const old=inventory.find(x=>x.id===editingId);
- const id=editingId||(crypto?.randomUUID?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));
+ const id=editingId||(globalThis.crypto?.randomUUID?globalThis.crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2));
  const next={...v,id,created:old?.created||new Date().toISOString(),updated:new Date().toISOString()};
  const previous=inventory;
  inventory=editingId?inventory.map(x=>x.id===editingId?next:x):[next,...inventory];
