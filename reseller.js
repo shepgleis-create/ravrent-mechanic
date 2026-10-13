@@ -2,10 +2,12 @@
 const $=id=>document.getElementById(id);
 const DB='ravrent_reseller_inventory_v1',INTAKE='ravrent_reseller_intake_v1';
 const costs=['purchase','buyerFees','transport','parts','labor','detailing','paperwork','other'];
+const inspections=[['vinIdentity','VIN plates and paperwork match'],['titleEvidence','Title, liens and seller identity'],['body','Body, frame and structural damage'],['paint','Paint, panel fit and evidence of repairs'],['engine','Engine operation and fluid leaks'],['transmission','Transmission and driveline'],['suspension','Suspension, steering and handling'],['brakes','Brakes, tires and wheels'],['electrical','Electrical systems and warning lamps'],['obd','OBD codes and emissions readiness'],['road','Road test and operating temperature'],['recalls','VIN-specific recall evidence']];
+const inspectStates={untested:'Not inspected',pass:'Checked — satisfactory',concern:'Needs further inspection',fail:'Issue confirmed'};
 const money=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
 const fullMoney=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2});
-const fields=['formVin','formYear','formMake','formModel','formTrim','formMileage','formStage',...costs,'asking','actualSale','formNotes'];
-const numeric=['formYear','formMileage',...costs,'asking','actualSale'];
+const fields=['formVin','formYear','formMake','formModel','formTrim','formMileage','formStage',...costs,'asking','desiredProfit','actualSale','formNotes'];
+const numeric=['formYear','formMileage',...costs,'asking','desiredProfit','actualSale'];
 const stages={considering:'Researching',purchased:'Purchased',reconditioning:'Reconditioning',listed:'Listed',sold:'Sold'};
 let inventory=[],editingId=null,activeFilter='all';
 const safe=(x,max=3000)=>String(x===null||x===undefined?'':x).slice(0,max);
@@ -58,11 +60,13 @@ function render(){
 }
 function getForm(){
  const record={};for(const id of fields){const key=id.startsWith('form')?id==='formVin'?'vin':id==='formYear'?'year':id==='formMake'?'make':id==='formModel'?'model':id==='formTrim'?'trim':id==='formMileage'?'mileage':id==='formStage'?'stage':id==='formNotes'?'notes':id:id;record[key]=numeric.includes(id)?value(id):safe(value(id),id==='formNotes'?3000:100)}
+ record.inspection={};for(const [key] of inspections){const control=document.getElementById('inspect-'+key);record.inspection[key]=inspectStates[control?.value]?control.value:'untested'}
  return record
 }
 function fill(record){
  const ids={formVin:'vin',formYear:'year',formMake:'make',formModel:'model',formTrim:'trim',formMileage:'mileage',formStage:'stage',formNotes:'notes'};
  for(const id of fields){const key=ids[id]||id;$(id).value=record&&record[key]!==undefined?String(record[key]):id==='formStage'?'considering':''}
+ for(const [key] of inspections){const control=document.getElementById('inspect-'+key);if(control)control.value=inspectStates[record?.inspection?.[key]]?record.inspection[key]:'untested'}
  updateMath();
 }
 function updateMath(){
@@ -72,6 +76,13 @@ function updateMath(){
  $('formProfit').textContent=profit===null?'—':fullMoney.format(profit);
  $('formProfit').className=profit===null?'':profit>=0?'profit-positive':'profit-negative';
  $('formRoi').textContent=profit===null||total<=0?'—':(100*profit/total).toFixed(1)+'%';
+ const asking=hasNumber(v.asking)?Number(v.asking):null;
+ const maxOffer=asking!==null&&hasNumber(v.desiredProfit)?asking-(total-number(v.purchase))-number(v.desiredProfit):null;
+ $('formMaxOffer').textContent=maxOffer===null?'—':fullMoney.format(maxOffer);
+ $('formMaxOffer').className=maxOffer===null?'':maxOffer>=0?'profit-positive':'profit-negative';
+ const values=Object.values(v.inspection||{});const complete=values.filter(x=>x!=='untested').length;
+ const flagged=values.filter(x=>x==='concern'||x==='fail').length;
+ $('inspectionSummary').textContent=complete+' of '+inspections.length+' inspection areas recorded; '+flagged+' flagged for review. Owner-reported, not independently verified.';
 }
 function open(id=null,intake=null){
  editingId=id;
@@ -79,6 +90,7 @@ function open(id=null,intake=null){
  $('vehicleForm').reset();fill(record);
  $('dialogTitle').textContent=id?'Edit inventory vehicle':'Add inventory vehicle';
  $('deleteVehicle').hidden=!id;
+ $('printVehicle').hidden=!id;
  $('formStatus').textContent='';
  $('decodeStatus').textContent=intake?'Vehicle details imported from VIN Intelligence. Check all information before saving.':'';
  $('vehicleDialog').showModal();
@@ -100,12 +112,13 @@ function validate(v){
  if(!v.year||!Number.isInteger(Number(v.year))||Number(v.year)<1900||Number(v.year)>2035)return 'Enter a valid model year.';
  if(!v.make||!v.model)return 'Year, make and model are required.';
  if(!stages[v.stage])return 'Select a valid inventory stage.';
- for(const k of [...costs,'asking','actualSale']){
+ for(const k of [...costs,'asking','desiredProfit','actualSale']){
   if(v[k]==='')continue;
   if(!Number.isFinite(Number(v[k]))||Number(v[k])<0||Number(v[k])>100000000)return 'Amounts must be between $0 and $100 million.'
  }
  if(v.mileage!==''&&(!Number.isInteger(Number(v.mileage))||Number(v.mileage)<0||Number(v.mileage)>9999999))return 'Mileage must be a whole number.';
  if(v.stage==='sold'&&!hasNumber(v.actualSale))return 'Enter the actual final sale price before marking a vehicle as sold.';
+ for(const [key] of inspections){if(!inspectStates[v.inspection?.[key]])return 'Invalid inspection state.';}
  return null
 }
 function save(){
@@ -128,12 +141,12 @@ function download(name,data,type){
 function csvCell(v){let text=safe(v,3000);if(/^[\s]*[=+@-]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"'}
 function exportCsv(){
  if(!inventory.length){$('inventoryHint').textContent='Add at least one vehicle before exporting.';return}
- const keys=['vin','year','make','model','trim','mileage','stage',...costs,'asking','actualSale','notes','created','updated'];
- const out=[...keys,'directCostTotal','grossProfit','roiPercent'];
+ const keys=['vin','year','make','model','trim','mileage','stage',...costs,'asking','desiredProfit','actualSale','notes','created','updated'];
+ const out=[...keys,'directCostTotal','grossProfit','roiPercent',...inspections.map(([key])=>'inspection_'+key)];
  const rows=[out.map(csvCell).join(',')];
  for(const v of inventory){
   const cost=sumCost(v),sale=saleValue(v),profit=sale===null?'':(sale-cost).toFixed(2),roi=sale===null||cost===0?'':(100*(sale-cost)/cost).toFixed(2);
-  rows.push([...keys.map(k=>v[k]??''),cost.toFixed(2),profit,roi].map(csvCell).join(','))
+  rows.push([...keys.map(k=>v[k]??''),cost.toFixed(2),profit,roi,...inspections.map(([key])=>v.inspection?.[key]||'untested')].map(csvCell).join(','))
  }
  download('ravrent-reseller-inventory-'+new Date().toISOString().slice(0,10)+'.csv','\uFEFF'+rows.join('\r\n'),'text/csv;charset=utf-8');
  $('inventoryHint').textContent='CSV exported. This browser remains the primary copy unless you back it up.';
