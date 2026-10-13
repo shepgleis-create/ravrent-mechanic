@@ -6,7 +6,7 @@ const path=require('node:path');
 const source=fs.readFileSync(path.join(__dirname,'..','reseller.js'),'utf8');
 const html=fs.readFileSync(path.join(__dirname,'..','reseller.html'),'utf8');
 function start(intake=null){
- const nodes=new Map(),stored=new Map(),session=new Map();
+ const nodes=new Map(),stored=new Map(),session=new Map(),downloads=[];let printed=false;
  if(intake)session.set('ravrent_reseller_intake_v1',JSON.stringify(intake));
  let id=0;
  function make(name){const node={name,value:'',textContent:'',className:'',dataset:{},hidden:false,disabled:false,children:[],listeners:{},style:{},
@@ -19,11 +19,11 @@ function start(intake=null){
  const get=name=>{if(!nodes.has(name))nodes.set(name,make(name));return nodes.get(name)};
  const document={getElementById:get,createElement:make,querySelectorAll:()=>[],body:{append(){}}};
  const storage=map=>({getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)});
- const context={document,window:{addEventListener(){},print(){}},localStorage:storage(stored),sessionStorage:storage(session),crypto:{randomUUID:()=>String(++id)},confirm:()=>true,Blob:class{},URL:{createObjectURL:()=>'',revokeObjectURL(){}},fetch:()=>{throw Error('No network expected')}};
+ const context={document,window:{addEventListener(){},print(){printed=true}},localStorage:storage(stored),sessionStorage:storage(session),crypto:{randomUUID:()=>String(++id)},confirm:()=>true,Blob:class{constructor(parts){this.parts=parts}},URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:test'},revokeObjectURL(){}},fetch:()=>{throw Error('No network expected')}};
  vm.runInNewContext(source,context,{timeout:1200});
- const fire=(name,event)=>{for(const callback of get(name).listeners[event]||[])callback({preventDefault(){},target:{matches(){return true}}})};
+ const fire=(name,event)=>Promise.all((get(name).listeners[event]||[]).map(callback=>callback({preventDefault(){},target:{matches(){return true},files:get(name).files||[],value:get(name).value}})));
  const saved=()=>JSON.parse(stored.get('ravrent_reseller_inventory_v1')||'[]');
- return {get,fire,saved,stored,session}
+ return {get,fire,saved,stored,session,downloads,wasPrinted:()=>printed}
 }
 test('reseller page contains functional app controls and no external navigation',()=>{
  assert.doesNotThrow(()=>new vm.Script(source));
@@ -74,4 +74,40 @@ test('invalid VIN cannot create record; valid transfer populates intake form',()
  assert.equal(transfer.get('formVin').value,incoming.vin);
  assert.equal(transfer.get('formModel').value,'ACCORD');
  assert.equal(transfer.session.has('ravrent_reseller_intake_v1'),false);
+});
+
+test('JSON backup restores valid vehicles without overwriting or duplicating records',async()=>{
+ const first=start();first.fire('addVehicle','click');
+ for(const [id,value] of Object.entries({formVin:'1HGCM82633A004352',formYear:'2003',formMake:'HONDA',formModel:'ACCORD',formStage:'purchased',purchase:'2000',asking:'4300'}))first.get(id).value=value;
+ await first.fire('vehicleForm','submit');
+ assert.equal(first.saved().length,1);
+ await first.fire('backupJson','click');
+ assert.equal(first.downloads.length,1);
+ const backup=JSON.parse(first.downloads[0].parts[0]);
+ assert.equal(backup.version,1);assert.equal(backup.records[0].make,'HONDA');
+ const next=start();
+ const json=JSON.stringify(backup);
+ next.get('restoreJson').files=[{size:json.length,text:async()=>json}];
+ await next.fire('restoreJson','change');
+ assert.equal(next.saved().length,1);
+ assert.equal(next.saved()[0].vin,'1HGCM82633A004352');
+ next.get('restoreJson').files=[{size:json.length,text:async()=>json}];
+ await next.fire('restoreJson','change');
+ assert.equal(next.saved().length,1);
+});
+test('printable worksheet is labeled as self-reported and includes inspection findings',async()=>{
+ const app=start();app.fire('addVehicle','click');
+ for(const [id,value] of Object.entries({formYear:'2009',formMake:'LEXUS',formModel:'IS 250',formStage:'purchased',purchase:'2500',asking:'5000',formNotes:'Oil leak found'}))app.get(id).value=value;
+ app.get('inspect-engine').value='fail';
+ await app.fire('vehicleForm','submit');
+ const list=app.get('inventoryList').children[0];
+ const actions=list.children[1];
+ const reportButton=actions.children[1];
+ reportButton.onclick();
+ assert.equal(app.wasPrinted(),true);
+ const heading=app.get('printReport').children[0];
+ assert.match(heading.textContent,/Vehicle Acquisition/);
+ const flattened=app.get('printReport').children.flatMap(item=>[item.textContent,...(item.children||[]).map(x=>x.textContent)]).join(' | ');
+ assert.match(flattened,/Issue confirmed/);
+ assert.match(flattened,/not independently verified/i);
 });
