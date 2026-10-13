@@ -469,4 +469,13 @@ window.RavrentApp={
  openChatWithQuestion(question){setView('diagnose');$('messageInput').value=String(question||'').slice(0,3200);$('messageInput').focus();}
 };
 render();status();
+try{
+ const raw=sessionStorage.getItem('ravrent_ai_intake_v1');
+ if(raw){sessionStorage.removeItem('ravrent_ai_intake_v1');const entry=JSON.parse(raw);
+  if(entry&&entry.source==='vin'&&typeof entry.question==='string'&&Date.now()-Number(entry.created||0)<15*60*1000){
+   setView('diagnose');$('messageInput').value=entry.question.slice(0,3200);$('messageInput').focus();
+   notify('VIN research prepared for AI. Review the question and tap Send; no request was sent automatically.');
+  }
+ }
+}catch{}
 })();
