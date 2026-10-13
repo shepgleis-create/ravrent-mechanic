@@ -97,3 +97,18 @@ test('shop service templates populate editable work without inventing prices or 
  }
  assert.equal(a.get('customerTotal').textContent,'$0.00');
 });
+
+test('custom service templates save through an in-app field and persist without customer data',async()=>{
+ const a=simulate();await a.fire('createQuote');
+ const row=a.get('quoteLines').children[0];
+ row.querySelector('[data-field="description"]').value='Verify charging voltage';
+ row.querySelector('[data-field="unitPrice"]').value='65';
+ a.get('templateName').value='Charging system check';
+ await a.fire('saveTemplate');
+ const saved=JSON.parse(a.storage.get('ravrent_workshop_templates_v1')||'[]');
+ assert.equal(saved.length,1);
+ assert.equal(saved[0].name,'Charging system check');
+ assert.equal(saved[0].items[0].description,'Verify charging voltage');
+ assert.ok(!JSON.stringify(saved).includes('customerName'));
+ assert.equal(a.get('templateName').value,'');
+});
