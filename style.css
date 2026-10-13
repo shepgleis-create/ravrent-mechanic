@@ -227,3 +227,12 @@ input,select,textarea{color-scheme:dark}
  .health-row span{font-size:12px}
  .health-row small{font-size:11px;max-width:59%}
 }
+
+/* A simple setup message replaces unexplained AI errors; no stacked dashboards. */
+.health-setup[hidden]{display:none!important}
+.health-setup{padding:17px 0 20px;margin-top:20px;border-top:1px solid #3a4652;border-bottom:1px solid #3a4652}
+.health-setup strong{font-size:16px;color:#eec2af}
+.health-setup p{color:#bac9d4;font-size:13px;line-height:1.65;margin:7px 0 10px}
+.health-setup-links{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.health-setup-links a{display:inline-block;color:#e6b9a6;font-weight:650;font-size:13px;text-decoration:underline;text-underline-offset:4px;padding:7px 0}
+@media(max-width:650px){.health-setup-links{flex-direction:column;gap:2px}.health-setup-links a{padding:8px 0}}
