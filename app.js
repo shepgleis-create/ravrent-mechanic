@@ -105,8 +105,10 @@ async function send(text,isRetry){
   const messages=selected.map((m,i)=>({
    role:m.role,text:m.text,...(m.image&&i===lastImage?{image:m.image}:{}),...(m.video&&i===lastVideo?{video:m.video}:{}),...(m.modelParts?{modelParts:m.modelParts}:{})
   }));
-  const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep===true,research:data.research===true})});
+  const aiAbort=new AbortController(),aiTimer=setTimeout(()=>aiAbort.abort(),60000);
+  let response;
+  try{response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:aiAbort.signal,
+   body:JSON.stringify({vehicle:carFor(t),messages,deep:data.deep===true,research:data.research===true})})}finally{clearTimeout(aiTimer)}
   let result={};try{result=await response.json();}catch(e){}
   if(!response.ok||!result.reply){let error=new Error(result.error||'The server did not return an AI answer.');error.status=response.status;error.code=result.code||'AI_REQUEST';throw error;}
   try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:true,code:'CONNECTED',message:'Google returned a real AI response.',time:Date.now()}))}catch{}
@@ -115,8 +117,8 @@ async function send(text,isRetry){
    sources:result.sources||[],researchRequested:result.researchRequested,researchPerformed:result.researchPerformed,researchNote:result.researchNote||null,
    modelParts:result.modelParts||null,at:Date.now()});
  }catch(e){
-  const reason=e.message||'The assistant is unavailable right now. Please try again soon.';
-  const code=e.code||'AI_NETWORK';
+  const reason=e.name==='AbortError'?'The AI request timed out. Try again without web research or use Guided Diagnostics.':e.message||'The assistant is unavailable right now. Please try again soon.';
+  const code=e.name==='AbortError'?'TIMEOUT':e.code||'AI_NETWORK';
   try{localStorage.setItem('ravrent_ai_last_status',JSON.stringify({ok:false,code,message:reason,time:Date.now()}))}catch{}
   if($('connection')){$('connection').textContent='AI offline';$('connection').classList.remove('ready');$('connection').classList.add('warning')}
   t.messages.push({role:'error',text:reason,code,at:Date.now()});
