@@ -9,13 +9,13 @@ function start(intake=null){
  const nodes=new Map(),stored=new Map(),session=new Map();
  if(intake)session.set('ravrent_reseller_intake_v1',JSON.stringify(intake));
  let id=0;
- function make(name){return {name,value:'',textContent:'',className:'',dataset:{},hidden:false,disabled:false,children:[],listeners:{},style:{},
+ function make(name){const node={name,value:'',textContent:'',className:'',dataset:{},hidden:false,disabled:false,children:[],listeners:{},style:{},
   addEventListener(event,callback){(this.listeners[event]??=[]).push(callback)},
   append(...items){this.children.push(...items)},
   replaceChildren(...items){this.children=[...items]},
   setAttribute(k,v){this[k]=v},
   remove(){},click(){this.listeners.click?.forEach(callback=>callback({target:this}))},
-  matches(){return true},reset(){},showModal(){this.open=true},close(){this.open=false}}}
+  matches(){return true},reset(){},showModal(){this.open=true},close(){this.open=false}};Object.defineProperty(node,'id',{get(){return this._id||''},set(id){this._id=id;nodes.set(id,node)}});return node}
  const get=name=>{if(!nodes.has(name))nodes.set(name,make(name));return nodes.get(name)};
  const document={getElementById:get,createElement:make,querySelectorAll:()=>[],body:{append(){}}};
  const storage=map=>({getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)});
@@ -40,9 +40,17 @@ test('reseller worksheet calculates real entered costs and saves locally',()=>{
  assert.equal(app.get('formTotalCost').textContent,'$3,200.00');
  assert.equal(app.get('formProfit').textContent,'$1,800.00');
  assert.equal(app.get('formRoi').textContent,'56.3%');
+ assert.match(app.get('inspectionSummary').textContent,/0 of 12 inspection areas/);
+ assert.equal(app.get('formMaxOffer').textContent,'—');
+ app.get('desiredProfit').value='1500';app.fire('vehicleForm','input');assert.equal(app.get('formMaxOffer').textContent,'$2,300.00');
+ app.get('inspect-engine').value='fail';app.get('inspect-titleEvidence').value='concern';app.fire('vehicleForm','input');
+ assert.match(app.get('inspectionSummary').textContent,/2 of 12 inspection areas/);
  app.fire('vehicleForm','submit');
  assert.equal(app.saved().length,1);
  assert.equal(app.saved()[0].make,'LEXUS');
+ assert.equal(app.saved()[0].inspection.engine,'fail');
+ assert.equal(app.saved()[0].inspection.titleEvidence,'concern');
+ assert.equal(app.saved()[0].desiredProfit,'1500');
  assert.equal(app.get('capitalTotal').textContent,'$3,200');
  assert.equal(app.get('profitTotal').textContent,'$1,800');
  assert.equal(app.get('inventoryList').children.length,1);
