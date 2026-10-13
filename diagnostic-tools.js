@@ -88,49 +88,93 @@ function exportReport(){
  '\n\nThis is a general guided checklist, not a confirmed diagnosis.'],{type:'text/plain'});
  const url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='ravrent-diagnostic-checklist.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function tile(title,detail,kind){return '<div class="item-card"><div class="tag">'+esc(kind)+'</div><h3>'+esc(title)+'</h3><p>'+esc(detail)+'</p></div>';}
+const aiStatusKey='ravrent_ai_last_status';
+function updateAIState(ok,code,message){
+ const heading=by('aiConnectionHeadline'),detail=by('aiConnectionDetail'),dot=by('aiStateDot');
+ if(heading)heading.textContent=ok?'AI connected':code==='TESTING'?'Checking AI connection…':code==='UNVERIFIED'?'AI connection not verified':'AI connection unavailable';
+ if(detail)detail.textContent=message||'Run a live test to verify whether the provider can answer.';
+ if(dot)dot.className='health-dot '+(ok?'status-ok':code==='TESTING'?'status-working':code==='UNVERIFIED'?'status-unknown':'status-fail');
+ const header=by('connection');
+ if(header){header.textContent=ok?'AI connected':code==='UNVERIFIED'?'AI not tested':'AI offline';header.classList.toggle('ready',ok);header.classList.toggle('warning',!ok);}
+ if(code!=='TESTING'&&code!=='UNVERIFIED'){try{localStorage.setItem(aiStatusKey,JSON.stringify({ok,code,message,time:Date.now()}))}catch{}}
+}
+function healthRow(name,message,state){
+ return '<div class="health-row"><span>'+esc(name)+'</span><small class="'+(state==='ok'?'health-ok':state==='fail'?'health-fail':'')+'">'+esc(message)+'</small></div>'
+}
 async function runChecks(){
  const box=by('healthResults');if(!box)return;
- box.innerHTML=tile('Checking','Verifying the browser and server…','IN PROGRESS');
- let items=[];
- try{const k='ravrent-test-storage';localStorage.setItem(k,'1');let passed=localStorage.getItem(k)==='1';localStorage.removeItem(k);items.push(tile('Browser storage',passed?'Working on this device.':'Not writable; chat history may not persist.',passed?'PASS':'WARNING'));}
- catch(e){items.push(tile('Browser storage','Unavailable or disabled on this device.','WARNING'));}
- try{const controller=new AbortController(),id=setTimeout(()=>controller.abort(),10000);
- const r=await fetch('/api/health',{cache:'no-store',signal:controller.signal});clearTimeout(id);
- if(!r.ok)throw Error('Server returned '+r.status);
- const x=await r.json();
- items.push(tile('Application server',x.server==='online'?'Responding normally.':'Server returned an unexpected response.',x.server==='online'?'PASS':'WARNING'));
- items.push(tile('AI connection',x.assistant==='paused_by_owner'?'AI service is currently paused by the site owner to control spending.':x.assistant==='configured_unverified'?'API key installed, but a real answer has NOT been tested. Use the button below.':'No valid server setup has been confirmed.',x.assistant==='paused_by_owner'?'PAUSED':x.assistant==='configured_unverified'?'UNVERIFIED':'ACTION REQUIRED'));}
- catch(e){items.push(tile('Application server','Could not reach the diagnostic endpoint: '+e.message,'FAIL'));}
- try{const r=await fetch('/api/video-status?name=test',{cache:'no-store'});
- items.push(tile('Video upload endpoints',r.status===400?'Video-processing route is installed (a real clip is still untested).':'Route returned HTTP '+r.status+'; this does not verify actual uploads.',r.status===400?'ROUTE FOUND':'UNVERIFIED'));}
- catch(e){items.push(tile('Video upload endpoints','Video service unavailable.','FAIL'));}
- items.push(tile('Photo support','Local attachment picker is available; processing still requires an AI response.','READY'));
- items.push(tile('Guided troubleshooting','Runs on this device even when the AI connection is unavailable.','READY'));
- box.innerHTML=items.join('');
+ box.innerHTML=healthRow('App checks','Checking…','neutral');
+ const lines=[];
+ try{
+  const test='ravrent-storage-check';localStorage.setItem(test,'ok');
+  const working=localStorage.getItem(test)==='ok';localStorage.removeItem(test);
+  lines.push(healthRow('Local records',working?'Available on this device':'Storage is blocked',''+(working?'ok':'fail')));
+ }catch{lines.push(healthRow('Local records','Storage is unavailable','fail'))}
+ try{
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  let response;try{response=await fetch('/api/health',{cache:'no-store',signal:controller.signal})}finally{clearTimeout(timer)}
+  if(!response.ok)throw Error('HTTP '+response.status);
+  const data=await response.json();
+  const ok=data.server==='online';
+  lines.push(healthRow('Application server',ok?'Responding':'Service not responding as expected',ok?'ok':'fail'));
+  lines.push(healthRow('AI provider',data.assistant==='paused_by_owner'?'Paused by owner':data.assistant==='configured_unverified'?'Key installed; needs a live test':'No verified connection','neutral'));
+ }catch{lines.push(healthRow('Application server','Unable to reach server','fail'))}
+ lines.push(healthRow('Offline guided diagnostics','Available without AI','ok'));
+ box.innerHTML=lines.join('');
 }
 async function checkProvider(){
- const button=by('checkProvider'),out=by('providerCheckResult');if(!button||!out)return;
- button.disabled=true;out.textContent='Checking the Google AI service and configured models…';
+ const button=by('checkProvider'),out=by('providerCheckResult');
+ if(!button||!out)return;
+ button.disabled=true;out.textContent='Inspecting provider permissions…';
  try{
-  const r=await fetch('/api/provider-check',{cache:'no-store'}),data=await r.json();
-  if(!r.ok)throw Error(data.error||'HTTP '+r.status);
+  const response=await fetch('/api/provider-check',{cache:'no-store'}),data=await response.json();
+  if(!response.ok)throw Error(data.error||'HTTP '+response.status);
   if(data.status==='provider_access_ok'){
-   out.textContent='Server key accepted by Google. Standard model '+data.standardModel+(data.standardModelListed?' is listed.':' is not listed.')+' Deep model '+data.deepModel+(data.deepModelListed?' is listed.':' is not listed.')+' This does not verify an AI answer; run Test real AI response for that.';
-  }else out.textContent='AI provider check: '+(data.code||'UNKNOWN')+' — '+(data.message||'No available provider status.');
- }catch(e){out.textContent='AI provider check failed: '+e.message}
+   const matching=data.standardModelListed&&data.deepModelListed;
+   out.textContent='Google accepted model listing. '+(matching?'Both configured models are listed.':'At least one configured model is not available.')+' Run Test AI connection to verify actual generation.';
+   updateAIState(false,'UNVERIFIED','Google permits model listing, but a successful AI response has not been demonstrated.');
+  }else{
+   const message=data.message||'Provider access failed.';
+   out.textContent=(data.code||'PROVIDER')+': '+message;
+   updateAIState(false,data.code||'AI_PROVIDER',message);
+  }
+ }catch(e){out.textContent='Could not check provider: '+e.message;updateAIState(false,'PROVIDER_NETWORK','Could not reach provider test.')}
  finally{button.disabled=false}
 }
 async function liveTest(){
- const b=by('runLiveAiTest'),out=by('liveAiTestResult');if(!b||!out)return;
- b.disabled=true;out.textContent='Checking whether the assistant can actually answer…';
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),48000);
- try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
- body:JSON.stringify({messages:[{role:'user',text:'Reply with exactly: Diagnostic connection working.'}],deep:false,research:false})});
- const data=await r.json().catch(()=>({}));
- const passed=Boolean(r.ok&&data.reply);out.textContent=passed?'AI test passed. The provider returned an actual response.':'AI test failed (HTTP '+r.status+', '+(data.code||'UNKNOWN')+'): '+(data.error||'No usable response returned.');const indicator=by('connection');if(indicator){indicator.textContent=passed?'AI verified with live reply':'AI unavailable · '+(data.code||'HTTP_'+r.status);indicator.classList.toggle('ready',passed);indicator.classList.toggle('warning',!passed)}
- }catch(e){out.textContent='AI test failed: '+e.message;}finally{clearTimeout(timer);b.disabled=false;}
+ const button=by('runLiveAiTest'),out=by('liveAiTestResult');
+ if(!button||!out)return;
+ button.disabled=true;out.textContent='Requesting a real AI response…';
+ updateAIState(false,'TESTING','Checking a real Gemini reply.');
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
+ try{
+  const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+   signal:controller.signal,body:JSON.stringify({messages:[{role:'user',text:'Reply with exactly: Diagnostic connection working.'}],deep:false,research:false})});
+  const data=await response.json().catch(()=>({}));
+  if(response.ok&&typeof data.reply==='string'&&data.reply.trim()){
+   out.textContent='Live AI reply received. The diagnostic assistant is responding.';
+   updateAIState(true,'CONNECTED','Google returned a real generated response. Camera/media functions require separate tests.');
+  }else{
+   const message=data.error||'No AI response returned.';
+   out.textContent=(data.code||'REQUEST_FAILED')+' — '+message;
+   updateAIState(false,data.code||'REQUEST_FAILED',message);
+   const advanced=by('healthAdvanced');if(advanced)advanced.open=true;
+  }
+ }catch(e){
+  const message=controller.signal.aborted?'The AI test timed out.':'Could not reach the AI test endpoint.';
+  out.textContent=message;updateAIState(false,'NETWORK',message);
+ }finally{clearTimeout(timer);button.disabled=false}
 }
+try{
+ const saved=JSON.parse(localStorage.getItem(aiStatusKey)||'null');
+ if(saved&&Number.isFinite(saved.time)&&Date.now()-saved.time<12*60*60*1000){
+  const dot=by('aiStateDot'),header=by('connection');
+  if(by('aiConnectionHeadline'))by('aiConnectionHeadline').textContent=saved.ok?'AI responded in last test':'AI connection unavailable';
+  if(by('aiConnectionDetail'))by('aiConnectionDetail').textContent=saved.message||'Run Test AI connection again.';
+  if(dot)dot.className='health-dot '+(saved.ok?'status-ok':'status-fail');
+  if(header){header.textContent=saved.ok?'AI recently tested':'AI offline';header.classList.toggle('ready',!!saved.ok);header.classList.toggle('warning',!saved.ok)}
+ }
+}catch{}
 const active=()=>{
  const wizard=by('wizardPane'),health=by('healthPane');
  if(wizard&&!wizard.classList.contains('hide'))render();
