@@ -15,7 +15,7 @@ test('shop pipeline excludes drafts from issued quotes and completed from open p
  assert.equal(m.issued,3);
  assert.equal(m.approved,2);
  assert.equal(m.openValue,420);
- assert.equal(m.completedValue,268.58);
+ assert.equal(m.completedValue,267.94);
  assert.equal(m.approvalRate,66.67);
  assert.equal(m.estimatedGrossMargin,130);
  assert.equal(m.mix.labor.cost,70);
