@@ -260,13 +260,16 @@ async function restore(file){
   if(parsed.some(x=>!x))throw Error('The backup contains invalid estimates.');
   const ids=new Set(records.map(x=>x.id)),numbers=new Set(records.map(x=>x.number)),added=[];
   for(const record of parsed){if(ids.has(record.id)||numbers.has(record.number))continue;added.push(record);ids.add(record.id);numbers.add(record.number)}
-  if(!added.length){notify('Every backup estimate is already here. No changes made.');return}
+  const names=new Set(customTemplates.map(t=>t.name.toLowerCase()));
+  const newTemplates=Array.isArray(data.templates)?data.templates.filter(t=>t&&typeof t.name==='string'&&t.name.trim()&&t.name.length<=70&&sanitizeTemplateItems(t.items)&&!names.has(t.name.toLowerCase())).slice(0,Math.max(0,25-customTemplates.length)):[];
+  if(!added.length&&!newTemplates.length){notify('Estimates and service templates are already restored. No changes made.');return}
   if(records.length+added.length>200)throw Error('Restore would exceed the 200-estimate browser limit.');
-  if(!confirm('Restore '+added.length+' additional estimates? Existing records will not be overwritten.'))return;
-  const previous=records;records=[...added,...records];
-  if(!saveStorage()){records=previous;throw Error('Unable to save the imported records.')}
-  if(Array.isArray(data.templates)){const names=new Set(customTemplates.map(t=>t.name.toLowerCase()));const available=25-customTemplates.length;const newTemplates=data.templates.filter(t=>t&&typeof t.name==='string'&&t.name.length<=70&&sanitizeTemplateItems(t.items)&&!names.has(t.name.toLowerCase())).slice(0,Math.max(0,available));if(newTemplates.length){const existing=customTemplates;customTemplates=[...existing,...newTemplates.map(t=>({id:id(),name:t.name,items:sanitizeTemplateItems(t.items)}))];if(!persistTemplates())customTemplates=existing;renderTemplates()}}
-  render();notify(added.length+' estimates restored without overwriting existing records.')
+  if(!confirm('Restore '+added.length+' new estimates and '+newTemplates.length+' service templates? Existing records will be preserved.'))return;
+  if(added.length){const previous=records;records=[...added,...records];if(!saveStorage()){records=previous;throw Error('Unable to save the imported estimates.')}}
+  let restoredTemplates=0;
+  if(newTemplates.length){const previous=customTemplates;customTemplates=[...previous,...newTemplates.map(t=>({id:id(),name:t.name,items:sanitizeTemplateItems(t.items)}))];
+   if(persistTemplates()){restoredTemplates=newTemplates.length;renderTemplates()}else customTemplates=previous}
+  render();notify(added.length+' estimates and '+restoredTemplates+' service templates restored. Existing records preserved.');
  }catch(e){notify('Restore failed: '+(e.message||'Invalid file'))}
 }
 function printEstimate(quote){
