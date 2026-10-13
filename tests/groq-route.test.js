@@ -16,7 +16,7 @@ function route(source,env,fetcher){
    module,{env},fetcher,Abort,()=>1,()=>{},URL,{warn(){},error(){}});
 }
 function request(ip){return{method:'POST',headers:{origin:'https://ravrent-mechanic.vercel.app',host:'ravrent-mechanic.vercel.app','x-forwarded-for':ip},body:{messages:[{role:'user',text:'Explain a cold-start engine rattle and next checks'}],deep:false,research:false}}}
-test('Groq is automatically selected over broken Gemini when Groq key is present',async()=>{
+test('Qwen hosted by Groq is automatically selected over broken Gemini when Groq key is present',async()=>{
  const calls=[];
  const handler=route(chatSource,{GROQ_API_KEY:' test-groq ',GEMINI_API_KEY:'broken-gemini'},async(url,opts)=>{
   calls.push({url,opts});
@@ -44,7 +44,7 @@ test('Explicit Gemini selection still works when owner prefers it',async()=>{
 test('Groq provider diagnostic tests model listing not Google API',async()=>{
  const calls=[];
  const handler=route(checkSource,{GROQ_API_KEY:'test-groq',GEMINI_API_KEY:'old-google'},async url=>{
-  calls.push(url);return{ok:true,json:async()=>({data:[{id:'llama-3.3-70b-versatile'},{id:'qwen/qwen3.8-27b'}]})};
+  calls.push(url);return{ok:true,json:async()=>({data:[{id:'qwen/qwen3.8-27b'},{id:'qwen/qwen3.8-27b'}]})};
  });
  const output=res();await handler({method:'GET',headers:{'x-forwarded-for':'198.51.100.92'},query:{}},output);
  assert.equal(output.code,200);
