@@ -2,6 +2,7 @@
 // No Gemini key is ever returned to the browser.
 const crypto = require('node:crypto');
 const {classifyGoogleError}=require('../lib/google-error');
+const {callGroq}=require('../lib/groq-provider');
 const attempts = new Map();
 let searchPausedUntil = 0;
 const MAX_HISTORY = 14;
@@ -90,7 +91,11 @@ module.exports=async function handler(req,res){
   if(origin&&host){try{if(new URL(origin).host!==host)return res.status(403).json({error:'This request must come from the app.',code:'ORIGIN'});}catch{ return res.status(403).json({error:'Invalid request origin.',code:'ORIGIN'});}}
   if(process.env.AI_REQUESTS_ENABLED==='false')return res.status(503).json({error:'AI chat is temporarily paused by the app owner. Offline guided diagnostics remain available.',code:'OWNER_PAUSED'});
   const key=String(process.env.GEMINI_API_KEY||'').trim();
-  if(!key)return res.status(503).json({error:'The assistant is not set up yet. The app owner needs to finish server configuration.',code:'NOT_CONFIGURED'});
+  const groqKey=String(process.env.GROQ_API_KEY||'').trim();
+  const preference=String(process.env.AI_PROVIDER||'auto').trim().toLowerCase();
+  const useGroq=preference==='groq'||(preference!=='gemini'&&Boolean(groqKey));
+  if(useGroq&&!groqKey)return res.status(503).json({error:'GroqCloud is selected but GROQ_API_KEY is not configured on the server.',code:'NOT_CONFIGURED'});
+  if(!useGroq&&!key)return res.status(503).json({error:'No AI provider is configured yet. Add GROQ_API_KEY to switch to open-weight models, or configure Gemini.',code:'NOT_CONFIGURED'});
   const remote=asText(req.headers?.['x-forwarded-for']||req.socket?.remoteAddress||'unknown',100).split(',')[0];
   if(!takeSlot(remote))return res.status(429).json({error:'Too many requests right now. Please wait before trying again.',code:'LOCAL_LIMIT'});
   const body=req.body&&typeof req.body==='object'?req.body:{};
@@ -101,6 +106,23 @@ module.exports=async function handler(req,res){
   try{contents=conversation(body.messages,body.deep===true);}
   catch(err){return res.status(400).json({error:err.message==='INVALID_IMAGE'?'Photo must be a JPEG, PNG, or WebP under 1.8 MB.':err.message==='INVALID_VIDEO'?'That video is unavailable or expired. Upload it again to continue.':'Conversation format is invalid.',code:'BAD_INPUT'});}
   const deep=body.deep===true,requestedResearch=body.research===true;
+  if(useGroq){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),53000);
+    try{
+      const reply=await callGroq({
+        key:groqKey,contents,
+        vehiclePrompt:system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle),
+        deep,requestedResearch,signal:controller.signal,
+        standardModel:process.env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile',
+        visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'
+      });
+      if(!reply.ok)return res.status(reply.status===400?400:reply.status===429?429:503).json({error:reply.message,code:reply.code});
+      return res.status(200).json(reply);
+    }catch(error){
+      console.warn('RAVRENT_GROQ_REQUEST_FAILED',{code:controller.signal.aborted?'TIMEOUT':'NETWORK',name:error?.name});
+      return res.status(503).json({error:controller.signal.aborted?'The open-weight AI request timed out. Try a shorter question.':'GroqCloud could not complete the request. Check the provider connection.',code:controller.signal.aborted?'TIMEOUT':'GROQ_NETWORK'});
+    }finally{clearTimeout(timer)}
+  }
   const model=deep?(process.env.GEMINI_MODEL||'gemini-2.5-flash'):(process.env.GEMINI_STANDARD_MODEL||'gemini-2.5-flash-lite');
   if(!/^gemini-[a-z0-9.-]{3,48}$/.test(model))return res.status(503).json({error:'The assistant is not configured correctly.',code:'MODEL_CONFIG'});
   const prompt=system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle);
