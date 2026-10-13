@@ -1,0 +1,26 @@
+.article-page{padding:0 0 45px}
+.article-hero{padding:58px 0 45px;border-bottom:1px solid #2b3946}
+.article-hero h1{max-width:800px;font-size:clamp(34px,5vw,58px);line-height:1.12;letter-spacing:-2px;margin:13px 0 18px}
+.article-hero p{color:#b8c7d3;font-size:17px;max-width:740px;line-height:1.75;margin:0}
+.article-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:24px}
+.article-layout{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:45px;align-items:start;padding-top:20px}
+.article-main{min-width:0}
+.article-section{padding:27px 0;border-bottom:1px solid #293845;scroll-margin-top:20px}
+.article-section h2{font-size:clamp(21px,3vw,29px);line-height:1.23;letter-spacing:-.7px;margin:0 0 15px}
+.article-section p{color:#bfccd8;line-height:1.87;font-size:15px;margin:0}
+.article-section h3{font-size:17px;margin:22px 0 7px}
+.article-side{position:sticky;top:22px;padding-top:15px}
+.article-side-card{background:#131e28;border:1px solid #344452;border-radius:14px;padding:18px}
+.article-side-card .guide-kicker{margin-bottom:14px}
+.article-side-card a{display:block;color:#b4c4d1;text-decoration:none;border-bottom:1px solid #2b3946;padding:10px 0;font-size:12px;line-height:1.4}
+.article-side-card a:hover{color:#f0b59e}
+.article-side>p{color:#8fa4b5;font-size:12px;line-height:1.7;margin:18px 5px}
+.article-next{padding:25px;background:linear-gradient(145deg,#1a2b37,#131d26);border:1px solid #364d5f;border-radius:15px;margin-top:30px}
+.article-next h2{margin:0 0 9px;font-size:22px}
+.article-next p{margin:0 0 17px;color:#b7c7d4;font-size:14px;line-height:1.7}
+.article-next a{font-size:13px}
+.article-main .guide-ad{margin:25px 0;padding:15px;min-height:75px}
+.article-main .guide-ad[hidden]{display:none!important}
+.article-main .guide-ad .ad-label{text-align:center;font-size:10px;letter-spacing:1.3px;color:#8b9baa;margin-bottom:7px}
+@media(max-width:850px){.article-layout{grid-template-columns:1fr}.article-side{position:static;padding-top:0;display:none}.article-hero{padding:43px 0 29px}}
+@media(max-width:500px){.article-hero h1{font-size:35px;letter-spacing:-1.2px}.article-hero p{font-size:14px}.article-section p{font-size:14px}.article-section{padding:22px 0}.article-next{padding:18px}.article-actions a{width:100%;justify-content:center;text-align:center}.guide-top nav{row-gap:7px}}
