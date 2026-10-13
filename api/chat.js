@@ -31,7 +31,7 @@ function userParts(m) {
   if(typeof m.image==='string') {
     const match=m.image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+=*)$/);
     if(!match||match[2].length>2_500_000)throw Error('INVALID_IMAGE');
-    parts.push({inline_data:{mime_type:match[1],data:match[2]}});
+    parts.push({inline_data:{mime_type:'image/'+match[1],data:match[2]}});
   }
   if(m.video&&typeof m.video==='object') {
     if(m.video.source==='sampled-frames'){
