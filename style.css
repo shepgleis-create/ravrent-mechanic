@@ -236,3 +236,11 @@ input,select,textarea{color-scheme:dark}
 .health-setup-links{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
 .health-setup-links a{display:inline-block;color:#e6b9a6;font-weight:650;font-size:13px;text-decoration:underline;text-underline-offset:4px;padding:7px 0}
 @media(max-width:650px){.health-setup-links{flex-direction:column;gap:2px}.health-setup-links a{padding:8px 0}}
+
+/* Honest organization-wide AI cooldown, not a per-conversation limit. */
+.cooldown-notice{border-top:1px solid #80544c;border-bottom:1px solid #80544c;color:#e5b3a2;background:#2a2024;padding:10px 13px;font-size:12px;line-height:1.55;margin:4px 0 9px;border-radius:7px}
+.cooldown-notice.hide{display:none!important}
+.error-note .error-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:11px}
+.error-note .error-actions button{color:#eeb9ac!important;font-weight:650;text-decoration:underline;text-underline-offset:4px;font-size:13px;padding:7px 0;cursor:pointer;min-width:0}
+.error-note .error-actions button:disabled{opacity:.42;cursor:not-allowed;text-decoration:none}
+@media(max-width:500px){.error-note{padding:12px 14px!important;word-break:normal;overflow-wrap:anywhere}.error-note .error-actions{gap:11px 15px}.error-note .error-actions button{font-size:12px}}
