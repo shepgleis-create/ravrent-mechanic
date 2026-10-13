@@ -101,6 +101,28 @@ function updateAIState(ok,code,message){
 function healthRow(name,message,state){
  return '<div class="health-row"><span>'+esc(name)+'</span><small class="'+(state==='ok'?'health-ok':state==='fail'?'health-fail':'')+'">'+esc(message)+'</small></div>'
 }
+async function readProviderSetup(){
+ const target=by('providerSetup');if(!target)return null;
+ try{
+  const response=await fetch('/api/status',{cache:'no-store'});
+  if(!response.ok)throw Error('Status unavailable');
+  const status=await response.json();
+  if(status.setupRequired){
+   target.hidden=false;
+   by('providerSetupHeading').textContent='Groq is not connected';
+   by('providerSetupBody').textContent='Ravrent has not received a GROQ_API_KEY for its production server. Until one is added, it still uses Gemini, which previously returned a permission error.';
+  }else if(status.provider==='Groq'&&!status.configured){
+   target.hidden=false;
+   by('providerSetupHeading').textContent='Groq API key missing';
+   by('providerSetupBody').textContent='Groq is selected but no API key is installed. Add GROQ_API_KEY in Vercel Production and redeploy.';
+  }else{
+   target.hidden=true;
+  }
+  return status;
+ }catch{
+  target.hidden=true;return null;
+ }
+}
 async function runChecks(){
  const box=by('healthResults');if(!box)return;
  box.innerHTML=healthRow('App checks','Checking…','neutral');
@@ -119,13 +141,18 @@ async function runChecks(){
   lines.push(healthRow('Application server',ok?'Responding':'Service not responding as expected',ok?'ok':'fail'));
   lines.push(healthRow('AI provider',data.assistant==='paused_by_owner'?'Paused by owner':data.assistant==='configured_unverified'?'Key installed; needs a live test':'No verified connection','neutral'));
  }catch{lines.push(healthRow('Application server','Unable to reach server','fail'))}
+ const selection=await readProviderSetup();
+ if(selection){
+  lines.push(healthRow('Active AI provider',selection.provider+(selection.configured?' · key installed, not yet verified':' · missing key'),selection.configured?'neutral':'fail'));
+  if(selection.setupRequired)lines.push(healthRow('Groq open-weight AI','GROQ_API_KEY not installed in Vercel','fail'));
+ }
  lines.push(healthRow('Offline guided diagnostics','Available without AI','ok'));
  box.innerHTML=lines.join('');
 }
 async function checkProvider(){
  const button=by('checkProvider'),out=by('providerCheckResult');
  if(!button||!out)return;
- button.disabled=true;out.textContent='Inspecting provider permissions…';
+ button.disabled=true;out.textContent='Inspecting provider permissions…';await readProviderSetup();
  try{
   const response=await fetch('/api/provider-check',{cache:'no-store'}),data=await response.json();
   if(!response.ok)throw Error(data.error||'HTTP '+response.status);
@@ -146,7 +173,7 @@ async function liveTest(){
  const button=by('runLiveAiTest'),out=by('liveAiTestResult');
  if(!button||!out)return;
  button.disabled=true;out.textContent='Requesting a real AI response…';
- updateAIState(false,'TESTING','Checking a real Gemini reply.');
+ updateAIState(false,'TESTING','Checking a real AI reply from the configured provider.');
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),45000);
  try{
   const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -154,7 +181,7 @@ async function liveTest(){
   const data=await response.json().catch(()=>({}));
   if(response.ok&&typeof data.reply==='string'&&data.reply.trim()){
    out.textContent='Live AI reply received. The diagnostic assistant is responding.';
-   updateAIState(true,'CONNECTED','Google returned a real generated response. Camera/media functions require separate tests.');
+   updateAIState(true,'CONNECTED',(data.provider||'The selected AI provider')+' returned a real generated response. Image and video features need separate verification.');
   }else{
    const message=data.error||'No AI response returned.';
    out.textContent=(data.code||'REQUEST_FAILED')+' — '+message;
