@@ -165,7 +165,7 @@ module.exports=async function handler(req,res){
       if(status===401||status===403){
         // Only return a safe classification, never raw provider text or key data.
         const reason=String(result.reason||'');
-        const cls=/api[\\s_-]?key.{0,80}(invalid|expired|not valid)|invalid.{0,50}api[\\s_-]?key|api_key_invalid/i.test(reason)?'AI_KEY_INVALID':
+        const cls=/api[\s_-]?key.{0,80}(invalid|expired|not valid)|invalid.{0,50}api[\s_-]?key|api_key_invalid/i.test(reason)?'AI_KEY_INVALID':
           /service.disabled|api.+not.+enabled|generativelanguage.googleapis.com.+disabled/i.test(reason)?'AI_API_DISABLED':
           /referrer|ip address|api.?key.+restricted|request.+blocked/i.test(reason)?'AI_KEY_RESTRICTED':
           /billing|payment|required.+bill/i.test(reason)?'AI_BILLING':
