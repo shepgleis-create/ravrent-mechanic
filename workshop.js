@@ -325,6 +325,20 @@ $('duplicateQuote').addEventListener('click',()=>{
  $('quoteFeedback').textContent='New unsaved copy. Save to create a separate draft.'
 });
 $('printQuote').addEventListener('click',()=>{const record=records.find(x=>x.id===editing);if(record)printEstimate(record)});
+$('reviewEstimateAI').addEventListener('click',()=>{
+ const form=getForm();
+ if(!form.customerVehicle){$('quoteFeedback').textContent='Enter a vehicle before asking AI to review the repair plan.';return}
+ const details=form.items.slice(0,20).filter(x=>x.description).map(x=>x.kind+': '+x.description.slice(0,135)).join('; ');
+ if(!details){$('quoteFeedback').textContent='Add actual proposed work first. The AI will not invent repair steps.';return}
+ const question='Review this proposed vehicle repair plan for missing diagnostic evidence, safety risks, common alternatives and questions to ask before approving repairs. '+
+  'Vehicle: '+form.customerVehicle.slice(0,150)+(form.quoteVin?' VIN: '+form.quoteVin.slice(0,17):'')+'. '+
+  'Proposed items: '+details.slice(0,1800)+'. This is a draft; do not assert that work was performed or components are faulty. '+
+  'No customer identity or contact information is provided.';
+ try{
+  sessionStorage.setItem('ravrent_ai_intake_v1',JSON.stringify({source:'workshop',question:question.slice(0,3100),created:Date.now()}));
+  location.href='/'
+ }catch{$('quoteFeedback').textContent='Could not open AI review. Copy the repair items into Diagnostics instead.'}
+});
 $('quoteSearch').addEventListener('input',render);
 document.querySelectorAll('[data-stage]').forEach(button=>button.addEventListener('click',()=>{
  filter=button.dataset.stage;
