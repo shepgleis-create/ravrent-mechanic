@@ -113,7 +113,7 @@ module.exports=async function handler(req,res){
         key:groqKey,contents,
         vehiclePrompt:system+'\n\nCURRENT VEHICLE:\n'+vehicleContext(body.vehicle),
         deep,requestedResearch,signal:controller.signal,fetcher:fetch,
-        standardModel:process.env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile',
+        standardModel:process.env.GROQ_TEXT_MODEL||'qwen/qwen3.8-27b',
         visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'
       });
       if(!reply.ok)return res.status(reply.status===400?400:reply.status===429?429:503).json({error:reply.message,code:reply.code});
