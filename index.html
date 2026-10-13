@@ -88,7 +88,13 @@
  <section id="healthPane" class="section-content hide"><div class="section-inner health-minimal">
   <div class="section-header health-heading"><div><h1>Connection & Diagnostics</h1><p>One clear connection status, without the repeated cards.</p></div></div>
   <div class="health-status" aria-live="polite"><span id="aiStateDot" class="health-dot status-unknown" aria-hidden="true"></span><div><strong id="aiConnectionHeadline">AI connection not verified</strong><p id="aiConnectionDetail">The app is available, but a real AI reply is needed to verify the selected provider.</p></div></div>
-  <div class="health-actions"><button type="button" class="primary-btn" id="runLiveAiTest">Test AI connection</button><button type="button" class="outline-btn" id="runHealth">Check app systems</button></div>
+  <div class="health-setup" id="providerSetup" hidden role="status">
+  <strong id="providerSetupHeading">Open-weight AI needs a key</strong>
+  <p id="providerSetupBody">GroqCloud is not configured in Vercel. The app is currently using the older Gemini connection.</p>
+  <div class="health-setup-links"><a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">1. Create Groq API key</a><a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer">2. Add GROQ_API_KEY in Vercel</a></div>
+  <p>Set the variable for Production, save, and redeploy. Never paste the key into chat.</p>
+ </div>
+ <div class="health-actions"><button type="button" class="primary-btn" id="runLiveAiTest">Test AI connection</button><button type="button" class="outline-btn" id="runHealth">Check app systems</button></div>
   <p class="health-feedback" id="liveAiTestResult" role="status"></p>
   <div id="healthResults" class="health-list" aria-live="polite"><div class="health-row"><span>Application checks</span><small>Run Check app systems</small></div></div>
   <details class="health-advanced" id="healthAdvanced"><summary>Technical details and connection setup</summary><div class="health-advanced-body"><p>Ravrent supports GroqCloud-hosted Qwen and other open-weight models, as well as Gemini. Provider keys stay on the server; a configured key is not proof that responses work.</p><button type="button" class="outline-btn" id="checkProvider">Check selected AI provider</button><p class="health-feedback" id="providerCheckResult" role="status"></p>
@@ -122,4 +128,4 @@
  <div class="modal-actions"><button class="outline-btn" type="button" data-close="serviceModal">Cancel</button><button class="primary-btn" type="submit">Save service</button></div></form>
  </div></div>
 <div id="toast" class="toast" role="status"></div>
-<script src="/app.js?v=20261012c" defer></script><script src="/diagnostic-tools.js?v=20261012f" defer></script></body></html>
+<script src="/app.js?v=20261013a" defer></script><script src="/diagnostic-tools.js?v=20261013a" defer></script></body></html>
