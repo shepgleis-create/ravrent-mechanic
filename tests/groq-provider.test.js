@@ -10,13 +10,13 @@ test('open-weight provider converts automotive turns without sending thought sig
  assert.equal(converted.messages[1].content,'Check codes and fuel trims');
  assert.ok(!JSON.stringify(converted).includes('internal-secret'));
 });
-test('Llama text model returns genuine content with no fabricated web sources',async()=>{
+test('Qwen text model returns genuine content with no fabricated web sources',async()=>{
  const calls=[];
  const result=await callGroq({key,contents:user('What should I test first?'),vehiclePrompt:'Vehicle: 2009 Lexus IS250',requestedResearch:true,
   fetcher:async(url,opts)=>{calls.push({url,opts});return {ok:true,json:async()=>({choices:[{message:{content:'Check power supply and engine grounds first.'}}]})}}});
  assert.equal(result.ok,true);
  assert.equal(result.provider,'Groq');
- assert.equal(result.model,'llama-3.3-70b-versatile');
+ assert.equal(result.model,'qwen/qwen3.8-27b');
  assert.match(result.reply,/engine grounds/);
  assert.equal(result.researchPerformed,false);
  assert.equal(result.sources.length,0);
@@ -24,11 +24,11 @@ test('Llama text model returns genuine content with no fabricated web sources',a
  assert.equal(calls.length,1);
  assert.equal(calls[0].opts.headers.Authorization,'Bearer '+key);
  const sent=JSON.parse(calls[0].opts.body);
- assert.equal(sent.model,'llama-3.3-70b-versatile');
+ assert.equal(sent.model,'qwen/qwen3.8-27b');
  assert.ok(sent.messages[0].content.includes('2009 Lexus'));
  assert.ok(!JSON.stringify(result).includes(key));
 });
-test('vehicle photos route to Qwen vision model, not text-only Llama',async()=>{
+test('vehicle photos route to Qwen vision model, with text and images',async()=>{
  const calls=[];
  const contents=[{role:'user',parts:[{text:'Look for visible leaks.'},{inline_data:{mime_type:'image/jpeg',data:'AA=='}}]}];
  const r=await callGroq({key,contents,vehiclePrompt:'2009 Lexus',fetcher:async(url,opts)=>{calls.push(JSON.parse(opts.body));return {ok:true,json:async()=>({choices:[{message:{content:'Image is too small to determine a leak.'}}]})}}});
@@ -56,7 +56,7 @@ test('model listing checks selected Llama and Qwen models, not live generation',
  const r=await checkGroqModels({key,fetcher:async(url,opts)=>{
   assert.match(url,/\/models$/);
   assert.equal(opts.headers.Authorization,'Bearer '+key);
-  return {ok:true,json:async()=>({data:[{id:'llama-3.3-70b-versatile'},{id:'qwen/qwen3.8-27b'}]})}
+  return {ok:true,json:async()=>({data:[{id:'qwen/qwen3.8-27b'},{id:'qwen/qwen3.8-27b'}]})}
  }});
  assert.equal(r.status,'provider_access_ok');
  assert.equal(r.standardModelListed,true);
