@@ -87,7 +87,7 @@
   <div class="section-header"><div><h1>System Diagnostics</h1><p>Check what works independently instead of assuming a green status means the AI is functioning.</p></div><button class="outline-btn" id="runHealth">Run checks</button></div>
   <div id="healthResults" class="item-grid"><div class="item-card"><h3>Not checked yet</h3><p>Run checks to verify app storage, server connectivity and available diagnostic tools.</p></div></div>
   <div class="callout">An installed API key does not prove the AI service can respond. A separate live AI test may consume API credits; automatic health checks do not.</div>
-  <button class="outline-btn" id="runLiveAiTest" style="margin-top:15px">Test real AI response</button>
+  <div class="ai-check-actions"><button class="outline-btn" id="checkProvider" type="button">Check Google AI access</button><button class="outline-btn" id="runLiveAiTest" style="margin-top:15px">Test real AI response</button></div><p class="muted" id="providerCheckResult" role="status" style="margin-top:12px">The provider check tests server-key access without generating an AI response.</p>
   <p class="muted" id="liveAiTestResult" role="status" style="margin-top:12px"></p>
  </div></section>
  <section id="reportsPane" class="section-content hide"><div class="section-inner"><div class="section-header"><div><h1>Saved Reports</h1><p>Keep exportable histories of diagnostic conversations and source research.</p></div></div><div id="reportGrid" class="item-grid"></div></div></section>
