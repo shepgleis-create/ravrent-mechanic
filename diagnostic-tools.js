@@ -182,6 +182,7 @@ const active=()=>{
  if(health&&!health.classList.contains('hide')&&!health.dataset.checked){health.dataset.checked='yes';runChecks();checkProvider();}
 };
 document.querySelectorAll('[data-view="wizard"],[data-view="health"]').forEach(b=>b.addEventListener('click',()=>setTimeout(active,0)));
+by('connection')?.addEventListener('click',()=>setTimeout(active,0));
 by('runHealth')?.addEventListener('click',runChecks);
 by('runLiveAiTest')?.addEventListener('click',liveTest);
 by('checkProvider')?.addEventListener('click',checkProvider);
