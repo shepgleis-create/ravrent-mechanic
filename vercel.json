@@ -24,6 +24,15 @@
     },
     "api/ads-config.js": {
       "maxDuration": 10
+    },
+    "api/recalls.js": {
+      "maxDuration": 20
+    },
+    "api/complaints.js": {
+      "maxDuration": 20
+    },
+    "api/safety.js": {
+      "maxDuration": 20
     }
   }
 }
