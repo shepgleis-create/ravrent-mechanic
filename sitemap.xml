@@ -1,6 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://ravrent-mechanic.vercel.app/</loc></url>
   <url><loc>https://ravrent-mechanic.vercel.app/guides.html</loc></url>
+  <url><loc>https://ravrent-mechanic.vercel.app/vin-report.html</loc></url>
+  <url><loc>https://ravrent-mechanic.vercel.app/toolkit.html</loc></url>
+  <url><loc>https://ravrent-mechanic.vercel.app/health-center.html</loc></url>
+  <url><loc>https://ravrent-mechanic.vercel.app/reseller.html</loc></url>
+  <url><loc>https://ravrent-mechanic.vercel.app/workshop.html</loc></url>
+  <url><loc>https://ravrent-mechanic.vercel.app/pricing.html</loc></url>
   <url><loc>https://ravrent-mechanic.vercel.app/privacy.html</loc></url>
 </urlset>
