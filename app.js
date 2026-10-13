@@ -305,6 +305,33 @@ async function waitForVideo(name,id,uploaded){
 }
 async function attachVideo(file){
  if(!file)return;
+ let provider='Groq';
+ try{const response=await fetch('/api/status',{cache:'no-store'});if(response.ok){const body=await response.json();provider=body.provider||'Groq'}}catch{}
+ if(provider!=='Gemini'){
+  const id=++videoUploadId;
+  videoUploading=true;pendingVideo=null;
+  $('videoFileName').textContent=file.name||'Vehicle recording';
+  $('videoPreview').classList.remove('hide');
+  videoStatus('Preparing two visible frames on this device…',10);
+  $('videoButton').disabled=true;$('sendButton').disabled=true;
+  try{
+   if(!window.RavrentVideoFrames?.extract)throw Error('Local video frame extraction is unavailable.');
+   const result=await window.RavrentVideoFrames.extract(file,{count:2,maxDimension:600,quality:.58});
+   if(id!==videoUploadId)return;
+   pendingVideo={source:'sampled-frames',frames:result.frames,
+    label:String(file.name||'Vehicle video').slice(0,100),duration:result.duration,uploadedAt:Date.now()};
+   videoStatus('Two frames ready. Audio is not analyzed.',100);
+   notify('Two video still frames are attached; sounds and continuous motion are not analyzed by this model.');
+  }catch(e){
+   if(id!==videoUploadId)return;
+   pendingVideo=null;
+   videoStatus('Frame extraction failed: '+(e.message||'Use photos instead.'),0);
+   notify('Could not read this video. Try MP4, MOV or attach individual photos.');
+  }finally{
+   if(id===videoUploadId){videoUploading=false;$('videoButton').disabled=false;$('sendButton').disabled=pending||secondsLeft()>0}
+  }
+  return;
+ }
  const mime=videoMime(file),MAX=32*1024*1024;
  if(!mime){notify('Choose an MP4, MOV or WebM recording.');return;}
  if(file.size<1||file.size>MAX){notify('The current video limit is 32 MB. Choose a shorter clip.');return;}
