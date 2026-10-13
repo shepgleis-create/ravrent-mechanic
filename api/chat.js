@@ -165,11 +165,11 @@ module.exports=async function handler(req,res){
       if(status===401||status===403){
         // Only return a safe classification, never raw provider text or key data.
         const reason=String(result.reason||'');
-        const cls=/api.?key.+(invalid|expired)|invalid.+api.?key|api_key_invalid/i.test(reason)?'AI_KEY_INVALID':
+        const cls=/api[\\s_-]?key.{0,80}(invalid|expired|not valid)|invalid.{0,50}api[\\s_-]?key|api_key_invalid/i.test(reason)?'AI_KEY_INVALID':
           /service.disabled|api.+not.+enabled|generativelanguage.googleapis.com.+disabled/i.test(reason)?'AI_API_DISABLED':
           /referrer|ip address|api.?key.+restricted|request.+blocked/i.test(reason)?'AI_KEY_RESTRICTED':
           /billing|payment|required.+bill/i.test(reason)?'AI_BILLING':
-          /model|permission/i.test(reason)?'AI_MODEL_ACCESS':'AI_AUTH';
+          /model.{0,120}(permission|denied|not found|access)|permission.{0,120}model|cannot access.{0,100}model/i.test(reason)?'AI_MODEL_ACCESS':'AI_AUTH';
         const details={
           AI_KEY_INVALID:'The Google AI API key is invalid or expired. The app owner needs to replace GEMINI_API_KEY in Vercel.',
           AI_API_DISABLED:'The Google Generative Language API is not enabled for the server key’s project.',
