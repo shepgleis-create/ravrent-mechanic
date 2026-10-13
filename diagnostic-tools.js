@@ -116,7 +116,7 @@ async function liveTest(){
  try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},signal:controller.signal,
  body:JSON.stringify({messages:[{role:'user',text:'Reply with exactly: Diagnostic connection working.'}],deep:false,research:false})});
  const data=await r.json().catch(()=>({}));
- out.textContent=r.ok&&data.reply?'AI test passed. The service returned an actual response.':'AI test failed (HTTP '+r.status+'): '+(data.error||'No usable response returned.');
+ const passed=Boolean(r.ok&&data.reply);out.textContent=passed?'AI test passed. The provider returned an actual response.':'AI test failed (HTTP '+r.status+', '+(data.code||'UNKNOWN')+'): '+(data.error||'No usable response returned.');const indicator=by('connection');if(indicator){indicator.textContent=passed?'AI verified with live reply':'AI unavailable · '+(data.code||'HTTP_'+r.status);indicator.classList.toggle('ready',passed);indicator.classList.toggle('warning',!passed)}
  }catch(e){out.textContent='AI test failed: '+e.message;}finally{clearTimeout(timer);b.disabled=false;}
 }
 const active=()=>{
