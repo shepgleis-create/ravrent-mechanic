@@ -33,6 +33,20 @@ function userParts(m) {
     parts.push({inline_data:{mime_type:match[1],data:match[2]}});
   }
   if(m.video&&typeof m.video==='object') {
+    if(m.video.source==='sampled-frames'){
+      const frames=m.video.frames;
+      if(!Array.isArray(frames)||!frames.length||frames.length>2)throw Error('INVALID_VIDEO');
+      let total=0;
+      for(const frame of frames){
+        const match=String(frame?.image||'').match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+=*)$/);
+        if(!match||match[2].length>650000)throw Error('INVALID_VIDEO');
+        total+=match[2].length;
+        if(total>1300000)throw Error('INVALID_VIDEO');
+        const time=Number(frame?.atSeconds);
+        parts.push({text:'Sampled video still frame at '+(Number.isFinite(time)?Math.max(0,Math.min(90,time)).toFixed(1):'?')+' seconds. These frames do not convey continuous motion or audio.'});
+        parts.push({inline_data:{mime_type:match[1],data:match[2]}});
+      }
+    }else{
     const uri=String(m.video.uri||''),name=String(m.video.name||'');
     const mime=String(m.video.mimeType||'');
     const age=Date.now()-Number(m.video.uploadedAt||0);
@@ -45,6 +59,7 @@ function userParts(m) {
     }else{
       if(!valid)throw Error('INVALID_VIDEO');
       parts.push({file_data:{mime_type:mime,file_uri:uri}});
+    }
     }
   }
   return parts;
