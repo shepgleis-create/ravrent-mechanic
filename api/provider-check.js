@@ -24,7 +24,7 @@ module.exports=async function handler(req,res){
  if(useGroq){
   try{
    const result=await checkGroqModels({key:groqKey,signal:c.signal,fetcher:fetch,
-    standardModel:process.env.GROQ_TEXT_MODEL||'llama-3.3-70b-versatile',
+    standardModel:process.env.GROQ_TEXT_MODEL||'qwen/qwen3.8-27b',
     visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'});
    return res.status(200).json(result)
   }catch{
