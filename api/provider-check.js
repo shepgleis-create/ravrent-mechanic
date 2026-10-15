@@ -35,7 +35,7 @@ module.exports=async function handler(req,res){
  if(useGroq){
   try{
    const result=await checkGroqModels({key:groqKey,signal:c.signal,fetcher:fetch,
-    standardModel:process.env.GROQ_TEXT_MODEL||'qwen/qwen3.8-27b',
+    standardModel:process.env.GROQ_TEXT_MODEL||'openai/gpt-oss-20b',
     visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'});
    return res.status(200).json(result)
   }catch{
