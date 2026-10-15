@@ -7,7 +7,7 @@ const garage=read(GARAGE,{}),vehicles=Array.isArray(garage.vehicles)?garage.vehi
 const saved=read(KEY,{});let plans=Array.isArray(saved.plans)?saved.plans.filter(x=>{try{core.makePlan(x);return true}catch{return false}}).slice(0,150):[];
 let readings=saved.readings&&typeof saved.readings==='object'&&!Array.isArray(saved.readings)?{...saved.readings}:{};
 let editingId=null;
-const today=()=>new Date().toISOString().slice(0,10);
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const note=s=>$('scheduleStatus').textContent=s;
 const el=(tag,text,cls)=>{const obj=document.createElement(tag);if(text!==undefined)obj.textContent=String(text);if(cls)obj.className=cls;return obj};
 const numeric=v=>v!==''&&Number.isFinite(Number(v))&&Number(v)>=0&&Number(v)<=9999999;
@@ -140,9 +140,17 @@ $('importScheduleFile').addEventListener('change',async event=>{
  const known=new Set(plans.map(x=>x.id));
  let restored=[];try{restored=backup.plans.map(core.makePlan).filter(x=>x.id&&!known.has(x.id));if(restored.length+plans.length>150)throw Error('Restore would exceed 150 plans.')}
  catch(e){note(e.message);return}
- if(!restored.length){note('All plans in this backup already exist.');return}
+ if(!restored.length){note('All plans in this backup already exist. Existing mileage records were left unchanged.');return}
  if(!confirm('Restore '+restored.length+' additional maintenance plans? Existing plans will be preserved.'))return;
- const old=plans;plans=[...restored,...old];if(!save())plans=old;else{render();note('Restored '+restored.length+' plans without replacing existing plans.')}
+ const old=plans,oldReadings={...readings},incoming=backup.readings&&typeof backup.readings==='object'&&!Array.isArray(backup.readings)?backup.readings:{};
+ plans=[...restored,...old];
+ for(const v of vehicles){
+  const id=String(v.id);
+  if(Object.prototype.hasOwnProperty.call(readings,id))continue;
+  if(Object.prototype.hasOwnProperty.call(incoming,id)&&numeric(incoming[id]))readings[id]=Math.round(Number(incoming[id]));
+ }
+ if(!save()){plans=old;readings=oldReadings}
+ else{render();note('Restored '+restored.length+' plans and missing mileage readings without replacing existing data.')}
 });
 $('exportCalendar').addEventListener('click',()=>{
  const selected=plans.filter(p=>p.vehicleId===$('scheduleVehicle').value&&p.dueDate&&!p.completed);
