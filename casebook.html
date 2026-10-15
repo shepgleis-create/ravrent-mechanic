@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark"><meta name="theme-color" content="#0a0f16">
+<title>Diagnostic Casebook | Ravrent Mechanic</title><meta name="description" content="Track real vehicle symptoms, trouble codes, diagnostic tests, cost notes and repair decisions in one local, mobile-first casebook."><link rel="stylesheet" href="/reseller.css"><link rel="stylesheet" href="/casebook.css"></head>
+<body><div class="shell">
+<header class="topbar"><a class="brand" href="/">RAVRENT <span>MECHANIC</span></a><nav aria-label="App navigation"><a href="/">AI Diagnostics</a><a href="/vin-report.html">VIN Camera</a><a href="/workshop.html">Workshop</a><a href="/toolkit.html">Inspections</a></nav></header>
+<main>
+<section class="hero case-hero"><div class="eyebrow">RAVRENT / DIAGNOSTIC CASEBOOK</div><div class="hero-layout"><div><h1>Evidence before parts.<br><span>Every case, organized.</span></h1><p>Record symptoms, fault codes, actual test results and the next repair decision. Works offline after loading—no AI credits required to take notes.</p></div><button id="newCase" type="button" class="primary big">+ New diagnostic case</button></div></section>
+<section class="metrics" aria-label="Case overview"><div class="metric"><span>Total cases</span><strong id="totalCases">0</strong><small>Stored on this device</small></div><div class="metric"><span>Active diagnoses</span><strong id="activeCases">0</strong><small>Open, testing, or waiting</small></div><div class="metric"><span>Resolved</span><strong id="resolvedCases">0</strong><small>User-recorded resolutions</small></div><div class="metric"><span>Urgent safety flags</span><strong id="urgentCases">0</strong><small>Reported risks, not verified diagnoses</small></div></section>
+<section class="panel"><div class="panel-head"><div><div class="eyebrow">DIAGNOSTIC HISTORY</div><h2>Case files</h2><p id="caseStatus" role="status">Your records remain in this browser. Export a backup regularly.</p></div><div class="head-actions"><label class="searchbox"><span class="sr-only">Search diagnostic cases</span><input id="caseSearch" placeholder="Search issue, VIN, model or code"></label><button type="button" id="casesCsv" class="outline">Export CSV</button><button type="button" id="casesBackup" class="outline">Backup JSON</button><button type="button" id="casesImportButton" class="outline">Restore JSON</button><input id="casesImport" type="file" accept=".json,application/json" hidden></div></div>
+<div class="tabs" role="group" aria-label="Case status"><button type="button" data-stage="all" aria-pressed="true">All</button><button type="button" data-stage="open" aria-pressed="false">Open</button><button type="button" data-stage="testing" aria-pressed="false">Testing</button><button type="button" data-stage="awaiting" aria-pressed="false">Waiting</button><button type="button" data-stage="resolved" aria-pressed="false">Resolved</button></div><div id="caseList" class="case-list" aria-live="polite"></div></section>
+<section class="footnote"><strong>Safe diagnostic records</strong><p>All findings and test results are user-entered and not independently verified. Hazard warnings are based solely on the boxes selected. A code is not proof a part has failed. No title/accident history, OBD connection, automatic service record or verified repair is implied.</p></section>
+</main><footer>Ravrent Mechanic · Personal vehicle case files · Browser-local beta</footer></div>
+<dialog id="caseDialog" aria-labelledby="caseDialogTitle"><form id="caseForm" method="dialog" novalidate>
+<header class="dialog-head"><div><div class="eyebrow">CASE WORKSHEET</div><h2 id="caseDialogTitle">New diagnostic case</h2></div><button id="closeCase" type="button" class="close" aria-label="Close case">×</button></header>
+<div class="form-body">
+<div class="group-title">Vehicle & reported problem</div><div class="form-grid">
+<label>Issue title <input id="caseName" maxlength="110" required placeholder="Cold start rattle, rough idle, intermittent charging…"></label>
+<label>Vehicle <input id="caseVehicle" maxlength="160" required placeholder="2009 Lexus IS 250 2.5L"></label>
+<label>VIN (optional) <input id="caseVin" maxlength="17" autocomplete="off" autocapitalize="characters" placeholder="17-character VIN"></label>
+<label>Mileage (optional) <input id="caseMiles" inputmode="numeric" type="number" min="0" max="9999999" placeholder="Odometer reading"></label>
+<label>Case status <select id="caseStage"><option value="open">Open</option><option value="testing">Testing</option><option value="awaiting">Waiting for parts or evidence</option><option value="resolved">Resolved (user recorded)</option></select></label>
+<label>Stored / reported trouble codes <input id="caseCodes" placeholder="P0300, P0171, U0100 …" autocapitalize="characters" maxlength="400"></label></div>
+<label>Symptoms observed <textarea id="caseSymptoms" rows="3" maxlength="2800" placeholder="What the vehicle actually does. Describe frequency, conditions and changes."></textarea></label>
+<label>When the problem occurs <textarea id="caseConditions" rows="2" maxlength="1300" placeholder="Cold starts, idle, 70 mph, after rain, under load…"></textarea></label>
+<div class="group-title">Reported immediate safety concerns</div>
+<p class="detail">Select only symptoms actually observed. The app does not remotely confirm roadworthiness.</p>
+<div class="case-hazards" id="caseHazards">
+<label><input type="checkbox" data-hazard="brakes"> Braking problem</label><label><input type="checkbox" data-hazard="steering"> Steering problem</label><label><input type="checkbox" data-hazard="fuelLeak"> Fuel leak or strong fuel smell</label><label><input type="checkbox" data-hazard="overheat"> Severe overheating</label><label><input type="checkbox" data-hazard="flashingCel"> Flashing check-engine light</label><label><input type="checkbox" data-hazard="smoke"> Heavy smoke or possible fire</label></div>
+<div id="caseSafety" class="case-safety" role="status">Review the reported safety symptoms before driving.</div>
+<div class="group-title">Diagnostic tests and evidence</div><p class="detail">Record measurements, what was tested, and the outcome. Never mark a test complete unless it was actually performed.</p>
+<div id="caseTests" class="case-tests"></div><button type="button" id="addCaseTest" class="outline">+ Add diagnostic test</button>
+<div class="group-title">Estimated direct expenses (optional)</div><div class="form-grid">
+<label>Diagnosis ($) <input id="costDiagnostic" type="number" min="0" step="0.01" placeholder="0"></label>
+<label>Parts ($) <input id="costParts" type="number" min="0" step="0.01" placeholder="0"></label>
+<label>Labor ($) <input id="costLabor" type="number" min="0" step="0.01" placeholder="0"></label>
+<label>Other ($) <input id="costOther" type="number" min="0" step="0.01" placeholder="0"></label></div>
+<div class="case-cost-total"><span>Entered estimate total, not amount paid</span><strong id="caseCostTotal">$0.00</strong></div>
+<label>Conclusions, unresolved questions, or next actions <textarea id="caseSummary" maxlength="2400" rows="3" placeholder="Note what is known, what remains untested, and what to check next."></textarea></label>
+<div class="warning-note">Review any safety hazard before driving. AI review is optional and will not send a request until you press Send in Diagnostics.</div>
+</div>
+<div class="dialog-actions"><button id="deleteCase" type="button" class="danger" hidden>Delete</button><button id="duplicateCase" type="button" class="outline" hidden>Duplicate</button><button id="printCase" type="button" class="outline" hidden>Print / PDF</button><button id="caseAI" type="button" class="outline">Prepare AI review</button><button id="caseToWorkshop" type="button" class="outline">Start repair estimate</button><span id="caseFeedback" role="status"></span><button class="primary" type="submit">Save case</button></div>
+</form></dialog>
+<section id="casePrint" class="print-report" hidden aria-label="Diagnostic case printable report"></section>
+<script defer src="/casebook-core.js"></script><script defer src="/casebook.js"></script>
+</body></html>
