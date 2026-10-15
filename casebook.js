@@ -12,7 +12,7 @@ const newId=()=>globalThis.crypto?.randomUUID?.()||'case-'+Date.now().toString(3
 let cases=[],editing=null,filter='all';
 function notice(message){els.notice.textContent=message}
 function load(){
- try{const items=JSON.parse(localStorage.getItem(KEY)||'[]');cases=Array.isArray(items)?items.filter(v=>v&&typeof v.id==='string').slice(0,180):[]}catch{cases=[]}
+ try{const items=JSON.parse(localStorage.getItem(KEY)||'[]');cases=Array.isArray(items)?items.slice(0,180).flatMap(v=>{try{if(!v?.id||!v.created||!v.updated)return[];return[engine.normalizeCase(v)]}catch{return[]}}):[]}catch{cases=[]}
 }
 function persist(){
  try{localStorage.setItem(KEY,JSON.stringify(cases));return true}catch{return false}
@@ -153,7 +153,7 @@ async function restore(file){
   if(payload?.app!=='ravrent-mechanic'||payload.format!==FORMAT||payload.version!==1||!Array.isArray(payload.records)||!payload.records.length||payload.records.length>180)throw Error('Unrecognized diagnostic backup');
   const incoming=payload.records.map(item=>{const normalized=engine.normalizeCase(item);if(!item.id||!item.created||!item.updated)throw Error('Case identification is missing.');return {...normalized,id:text(item.id,100),created:text(item.created,40),updated:text(item.updated,40)}});
   const ids=new Set(cases.map(c=>c.id));
-  const newRecords=incoming.filter(c=>!ids.has(c.id));if(!newRecords.length){notice('The backup has already been restored.');return}
+  const newRecords=incoming.filter(c=>{if(ids.has(c.id))return false;ids.add(c.id);return true});if(!newRecords.length){notice('The backup has already been restored.');return}
   if(cases.length+newRecords.length>180)throw Error('Restore exceeds the 180-case local limit.');
   if(!confirm('Import '+newRecords.length+' additional diagnostic cases? Existing cases will be preserved.'))return;
   const previous=cases;cases=[...newRecords,...cases];if(!persist()){cases=previous;throw Error('Browser storage is full.')}
@@ -175,6 +175,7 @@ function importFromVin(){
  try{const raw=sessionStorage.getItem('ravrent_casebook_intake_v1');if(!raw)return;
   sessionStorage.removeItem('ravrent_casebook_intake_v1');
   const input=JSON.parse(raw),vin=String(input?.vin||'').toUpperCase(),vehicle=text(input?.vehicle,160);
+  if(input?.created&&Date.now()-Number(input.created)>15*60*1000)return;
   if((vin&&!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin))||!vehicle)return;
   open({vehicle,vin,name:'Pre-purchase inspection',status:'open',symptoms:'',conditions:'',codes:[],tests:[{name:'Document visual inspection and scan findings',result:'planned'}]});
   $('caseFeedback').textContent='VIN research transferred. Confirm the vehicle and record only evidence you have actually checked.'
