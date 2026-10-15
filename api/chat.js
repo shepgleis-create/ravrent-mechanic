@@ -162,7 +162,7 @@ module.exports=async function handler(req,res){
           'Vehicle: '+vehicleContext(body.vehicle).slice(0,850)
         ].join('\n'),
         deep,requestedResearch,signal:controller.signal,fetcher:fetch,
-        standardModel:process.env.GROQ_TEXT_MODEL||'qwen/qwen3.8-27b',
+        standardModel:process.env.GROQ_TEXT_MODEL||'openai/gpt-oss-20b',
         visionModel:process.env.GROQ_VISION_MODEL||'qwen/qwen3.8-27b'
       });
       if(!reply.ok&&reply.status===429&&togetherKey&&process.env.AI_PAID_FALLBACK_ENABLED==='true'){
