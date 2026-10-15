@@ -96,6 +96,7 @@ function render(){
     logs.services=[{vehicle:vehicleName(vehicle),service:plan.name,date:date.value,miles:newMileage,
       next:updated.dueMileage||0,cost:Number(cost.value||0)},...history].slice(0,250);
     localStorage.setItem(TOOLKIT,JSON.stringify(logs));
+    window.dispatchEvent(new Event('ravrent:maintenance-updated'));
     note('Actual completed service saved to this schedule and Ownership Toolkit.')
    }catch{note('Service completion saved here; Ownership Toolkit could not be updated. Export your plans for backup.')}
    render()
