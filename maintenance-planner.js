@@ -70,8 +70,19 @@ function render(){
   const latest=Array.isArray(plan.history)?plan.history.at(-1):null;
   if(latest)row.append(el('small','Last recorded service: '+latest.date+' at '+latest.miles.toLocaleString('en-US')+' miles · $'+Number(latest.cost||0).toFixed(2),'schedule-last'));
   const actions=el('div',undefined,'case-actions');
-  const edit=el('button','Edit'),remove=el('button','Delete'),complete=el('button',plan.completed?'Record another service':'Record completed service');
-  edit.type=remove.type=complete.type='button';
+  const edit=el('button','Edit'),remove=el('button','Delete'),complete=el('button',plan.completed?'Record another service':'Record completed service'),review=el('button','Review with AI');
+  edit.type=remove.type=complete.type=review.type='button';
+  review.onclick=()=>{
+   const request='Review this user-defined vehicle maintenance plan. Vehicle: '+vehicleName(vehicle)+
+    '. Current owner-entered mileage: '+(currentMiles(selected)??'Unknown')+
+    '. Service: '+plan.name+'. Next due mileage: '+(plan.dueMileage??'Not entered')+
+    '. Next due date: '+(plan.dueDate||'Not entered')+
+    '. User-chosen repeating intervals: '+(plan.intervalMiles??'None')+' miles, '+(plan.intervalMonths??'None')+' months. '+
+    'Notes: '+String(plan.notes||'').slice(0,450)+
+    '. Explain what practical inspection or documentation would confirm whether this task is due. Never assume these are OEM intervals, a completed repair or a verified vehicle condition.';
+   try{sessionStorage.setItem('ravrent_ai_intake_v1',JSON.stringify({source:'health',question:request.slice(0,3000),created:Date.now()}));location.href='/'}
+   catch{note('Could not open AI review. Copy the plan into the diagnostic chat instead.')}
+  };
   edit.onclick=()=>{showPlan(plan);note('Editing '+plan.name+'. Save changes after verifying the schedule.')};
   remove.onclick=()=>{if(!confirm('Delete this service reminder and its completion history?'))return;
    const before=plans;plans=plans.filter(x=>x.id!==plan.id);if(!save())plans=before;else{render();note('Service plan deleted.')}}
@@ -101,7 +112,7 @@ function render(){
    }catch{note('Service completion saved here; Ownership Toolkit could not be updated. Export your plans for backup.')}
    render()
   };
-  actions.append(edit,complete,remove);row.append(actions,completion);host.append(row)
+  actions.append(edit,review,complete,remove);row.append(actions,completion);host.append(row)
  }
 }
 function download(filename,contents,mime){
