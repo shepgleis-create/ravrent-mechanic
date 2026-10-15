@@ -107,3 +107,12 @@ test('JSON backup and restore never duplicate an existing case',async()=>{
  dest.get('casesImport').files=[{size:body.length,text:async()=>body}];
  await dest.fire('casesImport','change');assert.equal(dest.records().length,1);
 });
+
+test('casebook inserts planned test template rows without pretending tests were performed',async()=>{
+ const app=start();await app.fire('newCase');
+ app.get('caseTestTemplate').value='noStart';await app.fire('insertCaseTemplate');
+ const rows=app.get('caseTests').children;
+ assert.equal(rows.length,4);
+ for(const row of rows)assert.equal(row.querySelector('[data-kind="result"]').value,'planned');
+ assert.match(app.get('caseFeedback').textContent,/PLANNED/);
+});
