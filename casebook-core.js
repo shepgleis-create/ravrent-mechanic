@@ -48,6 +48,43 @@ function normalizeCase(data,{requireTitle=true}={}){
   id:clamp(data.id,100),created:clamp(data.created,40),updated:clamp(data.updated,40)
  };
 }
+// Safe, unperformed starting points. These are checklists, not claimed test results.
+const TEST_TEMPLATES=Object.freeze({
+ noStart:{name:'No-start and charging',items:[
+  'Record resting battery voltage with a suitable meter',
+  'Record cranking voltage and starter behavior',
+  'Check battery terminals, grounds and charging-system supply',
+  'Scan stored and pending codes without clearing evidence']},
+ misfire:{name:'Misfire or rough running',items:[
+  'Record all codes, freeze-frame and misfire conditions',
+  'Review cylinder misfire counts, if supported by scanner',
+  'Check fuel trims and intake leak evidence',
+  'Verify ignition, fuel and mechanical evidence before replacing parts']},
+ overheating:{name:'Overheating concern',items:[
+  'Stop safely and let engine cool; never open a hot pressurized cap',
+  'Record temperature warnings and coolant-loss evidence after cooling',
+  'Inspect for external leaks and visible hose condition when safe',
+  'Arrange qualified cooling-system pressure/fan testing']},
+ prePurchase:{name:'Pre-purchase inspection',items:[
+  'Inspect tires, brakes, steering and suspension for obvious concerns',
+  'Record codes and emissions readiness without erasing them',
+  'Verify VIN and ownership/title evidence through authorized sources',
+  'Document test-drive behavior only when safe and lawful']},
+ electrical:{name:'Intermittent electrical problem',items:[
+  'Record voltage before, during and after the reported failure',
+  'Inspect visible connectors, fuses and battery grounds safely',
+  'Identify affected circuits and record exact DTCs',
+  'Compare findings with vehicle-specific wiring diagrams']},
+ noise:{name:'Cold-start engine noise',items:[
+  'Record duration, conditions, oil level and maintenance history',
+  'Check actual vehicle oil specification and filter information',
+  'Measure pressure or other mechanical data only with qualified tools',
+  'Review timing-system and accessory symptoms without assuming a failed part']}
+});
+function templateTests(id){
+ const entry=TEST_TEMPLATES[String(id||'')];
+ return entry?entry.items.map(name=>({name,result:'planned',note:''})):[];
+}
 function exportReview(c){
  const parts=[
   'Help organize the next safe diagnostic steps for a reported vehicle problem. Do not invent test results or recommend replacing a part without evidence.',
@@ -62,7 +99,7 @@ function exportReview(c){
  ];
  return parts.filter(Boolean).join('\n').slice(0,3700);
 }
-const api={parseCodes,triage,totals,normalizeCase,exportReview};
+const api={parseCodes,triage,totals,normalizeCase,exportReview,TEST_TEMPLATES,templateTests};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 if(root)root.RavrentCasebookCore=api;
 })(typeof window!=='undefined'?window:null);
