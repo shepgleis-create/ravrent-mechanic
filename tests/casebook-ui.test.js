@@ -8,7 +8,7 @@ const core=require('../casebook-core');
 function start(intake){
  const nodes=new Map(),stored=new Map(),session=new Map(),downloads=[];let printed=false;
  function node(tag){
-  const item={tagName:tag,value:'',textContent:'',className:'',dataset:{},style:{},children:[],listeners:{},checked:false,hidden:false,disabled:false,files:[],type:'',isConnected:true,
+  const item={tagName:tag,value:'',textContent:'',className:'',classList:{toggle(){},add(){},remove(){}},dataset:{},style:{},children:[],listeners:{},checked:false,hidden:false,disabled:false,files:[],type:'',isConnected:true,
    append(...children){for(const child of children){child.parent=this;this.children.push(child)}},
    replaceChildren(...children){this.children=[];this.append(...children)},
    remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this)},
