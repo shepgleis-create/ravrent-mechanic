@@ -2,7 +2,7 @@
 const $=id=>document.getElementById(id),GARAGE='ravrent-mechanic-v2',TOOL='ravrent_toolkit_v1',CASES='ravrent_repair_cases_v1';
 const parse=k=>{try{return JSON.parse(localStorage.getItem(k)||'{}')}catch{return {}}};
 const garage=parse(GARAGE),tool=parse(TOOL);let cases=parse(CASES);cases=Array.isArray(cases)?cases:[];let editing=null;
-const vehicles=Array.isArray(garage.vehicles)?garage.vehicles:[],services=Array.isArray(tool.services)?tool.services:[];
+const vehicles=Array.isArray(garage.vehicles)?garage.vehicles:[];let services=Array.isArray(tool.services)?tool.services:[];
 const usd=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(n)||0);
 const val=id=>$(id).value.trim();
 const el=(tag,txt,cls)=>{const x=document.createElement(tag);if(txt!==undefined)x.textContent=txt;if(cls)x.className=cls;return x};
@@ -42,5 +42,6 @@ $('saveCase').onclick=()=>{const title=val('caseTitle');if(!title){message('Ente
  if(persist()){clear();render();message('Repair case saved on this device.')};
 };
 $('exportCases').onclick=()=>download('ravrent-repair-cases.txt','Ravrent Mechanic repair cases\n\n'+cases.map(c=>[c.title,'Vehicle: '+(vehicles.find(v=>String(v.id)===c.vehicleId)?vehicleName(vehicles.find(v=>String(v.id)===c.vehicleId)):'Unassigned'),'Status: '+c.status,'Priority: '+c.priority,'Codes: '+c.codes,'Estimated cost: '+usd(c.cost),'Symptoms: '+c.symptoms,'Tests / repair: '+c.tests].join('\n')).join('\n\n---\n\n'));
+window.addEventListener('ravrent:maintenance-updated',()=>{const latest=parse(TOOL);services=Array.isArray(latest.services)?latest.services:[];render()});
 fillVehicles();render();
 })();
