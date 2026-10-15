@@ -46,3 +46,11 @@ test('casebook UI has complete usable controls and valid JavaScript',()=>{
  assert.ok(html.includes('src="/casebook-core.js"'));
  assert.doesNotMatch(html,/<a[^>]+href="https?:/i);
 });
+
+test('six diagnostic templates insert only planned checks and do not claim a fix',()=>{
+ const ids=Object.keys(core.TEST_TEMPLATES);
+ assert.equal(ids.length,6);
+ for(const id of ids){const checks=core.templateTests(id);assert.ok(checks.length>=3);
+  assert.ok(checks.every(item=>item.result==='planned'&&item.note===''))}
+ assert.deepEqual(core.templateTests('unknown'),[]);
+});
