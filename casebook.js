@@ -186,6 +186,15 @@ $('closeCase').addEventListener('click',()=>els.dialog.close());
 $('caseForm').addEventListener('submit',e=>{e.preventDefault();save()});
 $('caseVin').addEventListener('input',()=>{$('caseVin').value=$('caseVin').value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g,'').slice(0,17)});
 $('addCaseTest').addEventListener('click',()=>{if($('caseTests').children.length>=25){$('caseFeedback').textContent='Maximum 25 diagnostic tests per case.';return}buildTestRow()});
+$('insertCaseTemplate').addEventListener('click',()=>{
+ const selected=$('caseTestTemplate').value,plan=engine.templateTests(selected);
+ if(!plan.length){$('caseFeedback').textContent='Choose a diagnostic template first.';return}
+ const rows=$('caseTests');
+ if(rows.children.length===1&&!rows.children[0].querySelector('[data-kind="name"]')?.value?.trim())rows.replaceChildren();
+ if(rows.children.length+plan.length>25){$('caseFeedback').textContent='Maximum 25 tests. Remove unused rows before adding a plan.';return}
+ for(const item of plan)buildTestRow(item);
+ $('caseFeedback').textContent=plan.length+' checks inserted as PLANNED. Do not mark any test complete until it has actually been performed.'
+});
 $('caseHazards').addEventListener('change',updateSafety);
 for(const key of ['costDiagnostic','costParts','costLabor','costOther'])$(key).addEventListener('input',costPreview);
 $('caseSearch').addEventListener('input',render);
