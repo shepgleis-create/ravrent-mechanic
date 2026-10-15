@@ -32,7 +32,12 @@ function makePlan(data){
  return {id:String(data.id||'').slice(0,80),vehicleId,name,
   dueMileage:dueMileage||null,dueDate,intervalMiles,intervalMonths,
   notes:String(data.notes||'').trim().slice(0,600),
-  completed:!!data.completed,history:Array.isArray(data.history)?data.history.slice(-30):[]};
+  completed:!!data.completed,history:Array.isArray(data.history)?data.history.slice(-30).map(x=>{
+   if(!asDay(x?.date))throw Error('Invalid service completion date in backup.');
+   const miles=finiteNumber(x?.miles,{min:0,max:9999999}),cost=Number(x?.cost);
+   if(!Number.isFinite(cost)||cost<0||cost>1000000)throw Error('Invalid service cost in backup.');
+   return {date:x.date,miles,cost:Math.round(cost*100)/100};
+  }):[]};
 }
 function dueStatus(plan,currentMiles,today=new Date().toISOString().slice(0,10)){
  if(plan.completed)return {status:'completed',remainingMiles:null,remainingDays:null};
