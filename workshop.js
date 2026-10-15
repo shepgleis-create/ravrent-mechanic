@@ -360,7 +360,8 @@ function openIntake(){
   const vehicle=text(data?.vehicle,160);
   if(!vehicle&&!vin)return;
   open({customerVehicle:vehicle,quoteVin:vin,quoteStage:'draft',items:[{kind:'labor',description:'Diagnosis / inspection (enter actual work)',quantity:1,unitPrice:0,internalCost:0,taxable:false}]});
-  $('quoteFeedback').textContent='Vehicle carried over from VIN research. Enter shop, customer and actual prices before saving.'
+  if(typeof data?.note==='string')$('quoteNotes').value=data.note.slice(0,1300);
+  $('quoteFeedback').textContent='Vehicle and any entered case notes transferred. Confirm the actual work and prices before saving.'
  }catch{}
 }
 loadTemplates();renderTemplates();load();render();openIntake();
