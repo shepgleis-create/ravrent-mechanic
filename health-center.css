@@ -1,1 +1,31 @@
 .health-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 24px}.health-stat{border:1px solid #3a4957;background:#151e28;padding:20px;border-radius:14px;display:flex;flex-direction:column;gap:9px}.health-stat span{color:#aebdc9;font-size:12px}.health-stat strong{font-size:clamp(22px,3vw,29px);overflow-wrap:anywhere}.record{line-height:1.6}.record p{margin:5px 0}.record .case-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}.record .case-actions button{float:none}.record .priority{color:#e5ab8c}.tool-panel a{color:#edb19d}@media(max-width:650px){.health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* Mileage/date service scheduler — mobile-first, free and no AI key needed */
+.schedule-module h2{margin-bottom:10px}
+.schedule-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:19px 0}
+.schedule-stats>div{border-top:2px solid #526579;background:#17222b;padding:13px 10px;display:flex;flex-direction:column;gap:6px;border-radius:7px}
+.schedule-stats>div:first-child{border-top-color:#e5a28d}
+.schedule-stats span{font-size:11px;color:#acbecc}
+.schedule-stats strong{font-size:25px;color:#f0f5f8}
+.schedule-header{margin-bottom:7px}
+.schedule-hint{color:#9aafbf;line-height:1.65;font-size:12px;margin:11px 0}
+.schedule-form{padding:18px 0 14px;margin-top:14px;border-top:1px solid #3a4b59}
+.schedule-list{display:grid;gap:10px;margin-top:13px}
+.schedule-record{border:1px solid #384b59;background:#16212b;padding:17px;border-radius:12px}
+.schedule-record.due{border-left:3px solid #e99f83}
+.schedule-record.soon{border-left:3px solid #d2b27b}
+.schedule-record.completed{opacity:.82}
+.schedule-record-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.schedule-record-head strong{color:#e8f0f5;font-size:15px;line-height:1.4}
+.schedule-indicator{border-radius:30px;border:1px solid #4e5f6b;font-size:10px;font-weight:800;white-space:nowrap;padding:5px 8px;color:#b8cada}
+.schedule-record.due .schedule-indicator{color:#f1baa4;border-color:#8c6058}
+.schedule-record.soon .schedule-indicator{color:#e0c296;border-color:#7a6b4e}
+.schedule-detail{line-height:1.6;font-size:12px;color:#b6c7d2;margin:10px 0 7px}
+.schedule-last{font-size:11px;line-height:1.5;color:#98b3c2}
+.schedule-completion[hidden]{display:none!important}
+.schedule-completion{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:9px;border-top:1px solid #344553;margin-top:16px;padding-top:15px}
+.schedule-completion label{font-size:11px;color:#b3c2d0;display:grid;gap:7px;min-width:0}
+.schedule-completion input{width:100%;min-width:0;background:#111b25;border:1px solid #485968;color:#ebf1f5;border-radius:8px;padding:10px}
+.schedule-completion button{min-height:42px;font-size:12px}
+.schedule-complete-button{grid-column:span 2;background:#e7a184;color:#1d2229;font-weight:750}
+@media(max-width:760px){.schedule-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.schedule-completion{grid-template-columns:repeat(2,minmax(0,1fr))}.schedule-completion label:first-child{grid-column:1/-1}}
+@media(max-width:450px){.schedule-stats{gap:7px}.schedule-stats strong{font-size:23px}.schedule-record{padding:12px}.schedule-record-head strong{font-size:13px}.schedule-indicator{font-size:9px}}
