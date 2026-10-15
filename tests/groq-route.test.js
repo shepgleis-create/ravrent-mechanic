@@ -44,7 +44,7 @@ test('Explicit Gemini selection still works when owner prefers it',async()=>{
 test('Groq provider diagnostic tests model listing not Google API',async()=>{
  const calls=[];
  const handler=route(checkSource,{GROQ_API_KEY:'test-groq',GEMINI_API_KEY:'old-google'},async url=>{
-  calls.push(url);return{ok:true,json:async()=>({data:[{id:'qwen/qwen3.8-27b'},{id:'qwen/qwen3.8-27b'}]})};
+  calls.push(url);return{ok:true,json:async()=>({data:[{id:'openai/gpt-oss-20b'},{id:'qwen/qwen3.8-27b'}]})};
  });
  const output=res();await handler({method:'GET',headers:{'x-forwarded-for':'198.51.100.92'},query:{}},output);
  assert.equal(output.code,200);
