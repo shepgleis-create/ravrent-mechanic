@@ -102,7 +102,8 @@ test('printable worksheet is labeled as self-reported and includes inspection fi
  await app.fire('vehicleForm','submit');
  const list=app.get('inventoryList').children[0];
  const actions=list.children[1];
- const reportButton=actions.children[1];
+ const reportButton=actions.children.find(button=>/print|report/i.test(button.textContent||''));
+ assert.ok(reportButton,'A printable report button is required');
  reportButton.onclick();
  assert.equal(app.wasPrinted(),true);
  const heading=app.get('printReport').children[0];
