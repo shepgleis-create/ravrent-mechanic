@@ -80,3 +80,25 @@ A Vercel **READY** deployment only establishes build/deploy completion, not real
 **Current feature value:** Free beta workshop estimates, customer printouts, custom service templates, local shop performance analytics, and reseller inventory. Future paid value should concentrate on secure account sync, team seats, customer approvals, invoice/payment status syncing, customer portals, shared fleet records, professional reporting, and bounded AI credit packs. Do not sell existing free functionality as exclusive to a paid tier without a clearly communicated transition.
 
 **Launch verification remaining:** live Gemini success, iPhone/TikTok webview smoke test, account-safe merchant billing, signed webhooks, durable entitlements and quotas, and AdSense approval.
+
+## October 14, 2026 — Casebook release and production reality check
+
+**Shipped in existing repository:** `/casebook.html`, `/casebook.js`, `/casebook-core.js`, `/casebook.css`.
+
+New Diagnostic Casebook features:
+- Standalone local case list, case search, stages (open/testing/waiting/resolved), reported safety hazard flags, and case metrics.
+- VIN, mileage, symptoms, conditions, normalized stored DTC codes and user-entered evidence.
+- Test-by-test outcomes (planned/passed/failed/inconclusive), notes, and six **planned only** diagnostic templates (starting/charging, misfires, overheating, purchase inspection, electrical, and cold-start engine noise).
+- Itemized direct diagnostic/parts/labor expense planning based on actual entries, not invented prices.
+- Printable case reports; CSV export; versioned JSON backup/restore with duplicate-ID handling.
+- VIN Intelligence → Casebook and Casebook → Workshop Estimate / AI Chat handoffs; AI handoff prepares an **editable, unsent** prompt and transfers no customer contact fields.
+- Responsive dark mobile styling with no new offsite workflows.
+- Regression suites `tests/casebook.test.js`, `tests/casebook-ui.test.js`, `tests/casebook-integration.test.js`.
+
+**Provider and monetization state inspected this release:** Vercel Production environment listed `GROQ_API_KEY` only. **Not configured:** Together AI paid inference, Upstash usage-meter storage, AdSense approval/slot/consent variables, or Stripe billing. Therefore do not imply a paid fallback, global per-account quotas, active ad revenue, or paid subscriptions. Groq free usage is shared at the organization/model level. Browser cooldown and in-instance rate controls are not a substitute for persistent authenticated per-user entitlements.
+
+**Verification:** Source-based JavaScript syntax and controlled regression tests passed for Casebook, handoff wiring, Groq 429 handling, shop/reseller and VIN pages. Vercel's latest Casebook deployment returned `READY`. Full live iPhone camera recognition, actual AI video/frame processing with a real provider, authenticated production endpoint requests, and GitHub Actions green status were **not** independently confirmed. Vercel deployment build logs and runtime browser requests returned a 403 scope authorization error through the connected tools.
+
+**Production activation remains:** (1) durable user identity and usage metering with storage; (2) sensible daily AI allowance matched to actual provider costs; (3) accountable merchant billing and verified Stripe webhooks; (4) AdSense publisher approval, ad slots, legally suitable consent and eligible commercial hosting; (5) manual iPhone Safari/TikTok camera and video QA.
+
+Avoid rebranding model-level NHTSA campaign research as VIN-specific open/closed recalls or implying CARFAX history exists.
