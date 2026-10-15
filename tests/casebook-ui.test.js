@@ -11,7 +11,7 @@ function start(intake){
   const item={tagName:tag,value:'',textContent:'',className:'',classList:{toggle(){},add(){},remove(){}},dataset:{},style:{},children:[],listeners:{},checked:false,hidden:false,disabled:false,files:[],type:'',isConnected:true,
    append(...children){for(const child of children){child.parent=this;this.children.push(child)}},
    replaceChildren(...children){this.children=[];this.append(...children)},
-   remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this)},
+   remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this)},click(){return Promise.all((this.listeners.click||[]).map(fn=>fn({preventDefault(){},target:this})))},
    addEventListener(event,fn){(this.listeners[event]??=[]).push(fn)},
    setAttribute(n,v){this[n]=v},
    showModal(){this.open=true},close(){this.open=false},reset(){},
