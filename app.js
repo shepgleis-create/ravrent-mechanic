@@ -476,6 +476,10 @@ try{
  const raw=sessionStorage.getItem('ravrent_ai_intake_v1');
  if(raw){sessionStorage.removeItem('ravrent_ai_intake_v1');const entry=JSON.parse(raw);
   if(entry&&['vin','workshop','health','casebook','fleet'].includes(entry.source)&&typeof entry.question==='string'&&Date.now()-Number(entry.created||0)<15*60*1000){
+   if(entry.source==='fleet'&&typeof entry.vehicleId==='string'&&data.vehicles.some(v=>String(v.id)===entry.vehicleId)){
+    data.activeVehicleId=entry.vehicleId;
+    data.currentId=null;ensureThread();store();
+   }
    setView('diagnose');$('messageInput').value=entry.question.slice(0,3200);$('messageInput').focus();
    notify('Vehicle context prepared for AI. Review and tap Send; no request was made automatically.');
   }
