@@ -10,39 +10,38 @@ Responsive, dark-themed car troubleshooting web application developed under Ravr
 - Conversations, vehicle profiles, reported repair history, image input and saved/exportable diagnostic reports.
 - Neutral user-facing errors if no actual AI response can be obtained. No fabricated research or canned diagnosis.
 
-## Server configuration (app owner only)
+## Current server-side AI configuration
 
-Google Gemini remains the third-party inference service behind the app. The interface is independently branded, but this does **not** mean Ravrent created its own foundation model.
+Ravrent is independently branded, but its model inference currently runs on external services; Ravrent has **not** trained a proprietary foundation model.
 
-In Vercel, project ravrent-mechanic → Settings → Environment Variables:
+The existing Vercel project is `ravrent-mechanic`. Configure provider keys only under **Settings → Environment Variables**, choose **Production**, and redeploy. Never commit or paste secrets into issues or chat.
 
-- `GEMINI_API_KEY` — required. Store as a server-side Secret for Production; **never** commit the value to GitHub or put it into client code.
-- `GEMINI_MODEL` — optional, default `gemini-3.8-flash`.
-- `MECHANIC_ACCESS_CODE` — no longer used by the chat; can be removed from Vercel if desired.
+- `GROQ_API_KEY` — current production provider. Groq hosts `openai/gpt-oss-20b` for fast text and `qwen/qwen3.8-27b` for photo and sampled video frames; exact availability depends on Groq.
+- `GROQ_TEXT_MODEL` and `GROQ_VISION_MODEL` — optional model overrides; confirm both are available in your provider account.
+- `TOGETHER_API_KEY` — optional alternative provider; not currently configured. `AI_PROVIDER=together` selects it, or `AI_PAID_FALLBACK_ENABLED=true` enables explicit **paid** fallback when Groq rate limits. Keep fallback **off** until billing controls and approval exist.
+- `GEMINI_API_KEY` — optional Google Gemini integration. `AI_PROVIDER=gemini` selects it, but Google's key/project must be authorized separately.
+- `AI_REQUESTS_ENABLED=false` — emergency inference pause. This is **not** a spend cap.
+- Optional distributed anonymous beta allowance: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` and strong `USAGE_METER_SECRET`. Without these, limits remain best-effort and can be bypassed by new identities or server instances. This is not subscription entitlement enforcement.
 
-Redeploy the latest production commit after changing environment variables. The public `/api/status` endpoint only reports whether the secret is present, not if a request can succeed.
+`/api/status` reports which provider is configured; `/api/provider-check` can verify model-list access. **Neither proves generation succeeds**. Only a real chat request demonstrates a working response. Current public production provider checks report Groq model-list access, with generation unverified.
 
-### Why the earlier AI response failed
-The application was requesting Google Search grounding on Gemini 3.8 Flash for every chat by default, but grounding is not available to free-tier API customers for this model. A 429 may also mean the API project's model quota or request allowance is exhausted. The new backend retries without grounded research and can try a lightweight model instead.
+### AI usage and rate-limit behavior
 
-Google documents grounding availability, API rates and tiers at:
-https://ai.google.dev/gemini-api/docs/pricing
+Groq rate limits apply to the whole provider organization. A new Ravrent conversation does not reset those limits. The API and browser relay provider `Retry-After` when present, and quick mode limits history and output tokens to reduce unnecessary cost. Public-scale usage still needs enforceable identity, durable distributed quotas, security controls and a realistic budget.
 
-Enabling eligible paid billing may be required for deep *live* web research. Never claim web research succeeded if the API does not return search metadata.
+## Photo, camera, and video handling
 
-## Video and engine-sound analysis
+- Live VIN camera on `/vin-report.html`: camera-permission dependent; native barcode decoding with a ZXing fallback on supported devices. Printed VINs can use client OCR. Manual VIN entry always remains available.
+- AI vehicle photo analysis: sends images to the active vision model with clear uncertainty and no assumption of verified faults.
+- Under Groq/Together, short video clips are sampled **locally** into two representative still images. The AI does **not** hear the audio or observe continuous motion between frames. Frame extraction is browser-dependent and must be checked on iPhone.
+- Under explicitly selected Gemini, the existing resumable server-side video upload pipeline may provide actual video and audio to the Gemini Files API when credentials, limits and service are available. This path is **not** the current Groq production mode.
+- Visual or audio impressions from AI are not verified mechanical measurements. VIN and model-level recalls do not verify title history or a specific VIN's open/completed recall status.
 
-The mobile chat composer now has a video attachment control next to the photo button.
+## Connected vehicle operations and data safety
 
-- Accepts MP4, MOV (including iPhone QuickTime recordings) and WebM. The browser checks available video duration metadata and restricts to 90 seconds; the server independently limits uploads to 32 MiB.
-- Uses resumable, 1 MiB binary chunks through Vercel functions to work around Vercel's 4.5 MB function request limit. These chunks are proxied server-side into Google Gemini Files API without sending the API key to the browser.
-- The server uses a short-lived encrypted session token bound to the upload URL, MIME type and full file size. Uploaded videos are processed as **actual video plus recorded audio**, not fake screenshots.
-- After upload, the client polls until the video is ready, then includes the temporary file URI in the assistant's conversation. Replies can discuss specific observed sounds, motion and timestamps. An observation is not a mechanically confirmed diagnosis.
-- The provider's uploaded files expire after roughly 48 hours. Older conversations remain saved as text, and expired clips must be uploaded again.
-- Clips are processed by a third-party AI service. Video upload and analysis may count against API quotas and incur charges.
-- Audio-only sound uploads, live Bluetooth scanners, waveform measurements and calibrated decibel/frequency analysis are **not** included yet.
+The `/fleet.html` beta reads existing locally saved Garage vehicles, service plans, user-reported diagnostic cases, reseller inventory and workshop quotes. It links by saved vehicle ID or exact 17-character VIN; it does not infer ownership from similar make/model strings. Users can record fleet status, assignment and notes, export a CSV, and open the relevant tools with the vehicle already selected.
 
-**Known deployment constraints:** A request to analyze a video requires working Gemini API credentials and available model quota; upload succeeding does not guarantee a diagnostic answer. The upload feature has preliminary per-instance limits, but anonymous public uploads still present cost and abuse risks. Before a public launch, implement real user accounts, distributed rate limits, usage budgets, upload cleanup and project-wide cost monitoring.
+The workspace includes a one-file JSON backup from an explicit allowlist of existing local data stores. Restores validate record-group types and **never overwrite nonempty existing data groups**. Import is intentionally conservative and cannot merge individual records into an occupied group; use that tool's own import workflow when needed. Backup files may contain sensitive vehicle, customer and conversation information, so store them securely. Browser storage is **not** cloud sync.
 
 ## Architecture
 - `index.html`: branded chat application shell
@@ -58,7 +57,7 @@ The mobile chat composer now has a video attachment control next to the photo bu
 
 The server has same-origin browser checking, best-effort per-instance IP quotas and request-size limits, but **these are not sufficient to prevent abuse or billing exposure** across distributed functions. Before promoting the site, add a real identity solution or Vercel deployment protection, distributed throttling, persistent per-account usage limits, budget monitoring and abuse alerts. Do not rely on browser-provided request headers as authentication.
 
-Chats and vehicle records currently use local browser storage without encryption, multi-device synchronization, or backed-up storage. Only images submitted in conversations are forwarded to the third-party model; no live scanner data or sound analysis has been implemented.
+Chats and vehicle records currently use browser-local storage without automatic multi-device sync or automatic cloud backups. Fleet Command offers manual JSON export and conservative empty-dataset restore. Photos and sampled video frames sent for AI review are transmitted to the selected external provider; local VIN camera OCR does not require AI. No continuous audio analysis is available on the current Groq deployment.
 
 AI diagnostic advice is not an in-person inspection. Always verify measurements, wiring, service procedures, parts and torque values against qualified repair sources, especially with brakes, steering, fuel systems, overheating or electrical risks.
 
