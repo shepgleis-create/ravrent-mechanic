@@ -71,6 +71,23 @@ test('annotations filter invalid keys and bound optional data without mutating G
  assert.equal(core.build({...scenario(),annotations:state},'2026-10-15').vehicles.find(v=>v.id==='car-b').state,'out_of_service');
  assert.equal(JSON.stringify(garage),before);
 });
+test('fleet annotations cannot mutate Object.prototype and missing mileage is not a recorded zero',()=>{
+ const attack=JSON.parse('{"__proto__":{"state":"hold","notes":"tamper"},"car-b":{"state":"active"}}');
+ const sanitized=core.sanitizeAnnotations(attack);
+ assert.equal(Object.getPrototypeOf(sanitized),null);
+ assert.equal(({}).state,undefined);
+ const emptyMileage=core.build({garage:{vehicles:[{id:'unused',year:2004,make:'FORD',model:'FOCUS',miles:0}]}},'2026-10-15');
+ assert.equal(emptyMileage.vehicles[0].miles,null);
+});
+test('fleet AI handoff selects the correct car in a fresh chat without auto-sending',()=>{
+ const ui=fs.readFileSync(path.join(__dirname,'..','fleet.js'),'utf8');
+ const chat=fs.readFileSync(path.join(__dirname,'..','app.js'),'utf8');
+ assert.match(ui,/source:'fleet',vehicleId:vehicle\.id/);
+ assert.match(chat,/data\.activeVehicleId=entry\.vehicleId/);
+ assert.match(chat,/data\.currentId=null;ensureThread\(\);store\(\)/);
+ assert.match(chat,/no request was made automatically/i);
+ assert.match(ui,/Linked quote records/);
+});
 test('fleet page and all connected handoff controls exist and are parsable',()=>{
  const html=fs.readFileSync(path.join(__dirname,'..','fleet.html'),'utf8');
  const script=fs.readFileSync(path.join(__dirname,'..','fleet.js'),'utf8');
