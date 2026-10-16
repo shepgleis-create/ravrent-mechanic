@@ -54,7 +54,7 @@ function actionHandoff(kind,vehicle){
     (vehicle.miles!==null?'Reported odometer '+vehicle.miles+' miles. ':'')+
     'Scheduled service due now: '+vehicle.due+'. Open self-reported cases: '+(vehicle.repairCount+vehicle.caseCount)+'. '+
     'Never assume an unverified repair, recall status or mechanical fault. Ask about actual symptoms and measurements.';
-   sessionStorage.setItem('ravrent_ai_intake_v1',JSON.stringify({source:'fleet',question:question.slice(0,3000),created:Date.now()}))
+   sessionStorage.setItem('ravrent_ai_intake_v1',JSON.stringify({source:'fleet',vehicleId:vehicle.id,question:question.slice(0,3000),created:Date.now()}))
   }
   location.href=kind==='casebook'?'/casebook.html':kind==='workshop'?'/workshop.html':'/';
  }catch{$('fleetStatus').textContent='Could not transfer vehicle context. Open the destination tool and choose the vehicle manually.'}
@@ -133,7 +133,7 @@ function render(){
  if(!snapshot.vehicles.length){
   const blank=make('div','fleet-empty');blank.append(make('h3','','No Garage vehicles yet'),
    make('p','','Add your first car to My Garage. Fleet Command will automatically connect its maintenance plans, safety concerns and exact-VIN shop records.'));
-  blank.append(link('Open My Garage','/'));host.append(blank);
+  blank.append(link('Open My Garage','/?view=garage'));host.append(blank);
  }else if(!shown.length){
   const blank=make('div','fleet-empty');blank.append(make('h3','','No vehicles match'),make('p','','Try another filter or search. Your records have not been changed.'));host.append(blank)
  }else for(const v of shown)host.append(fleetCard(v));
@@ -148,7 +148,7 @@ function render(){
 function escapeCsv(v){let str=String(v??'');if(/^\s*[=+\-@]/.test(str))str="'"+str;return '"'+str.replace(/"/g,'""')+'"'}
 function exportCsv(){
  if(!snapshot.vehicles.length){$('fleetStatus').textContent='Add a garage vehicle before exporting a fleet CSV.';return}
- const header=['Vehicle','VIN','Odometer (reported)','Fleet status','Assignment','Safety risk (reported)','Services due','Services soon','Open cases','Open quotes (not collected)','Unlinked quote count','Notes'];
+ const header=['Vehicle','VIN','Odometer (reported)','Fleet status','Assignment','Safety risk (reported)','Services due','Services soon','Open cases','Open quotes (not collected)','Linked quote records','Notes'];
  const lines=[header.map(escapeCsv).join(',')];
  for(const v of snapshot.vehicles)lines.push([v.name,v.vin,v.miles??'',STATE_LABEL[v.state],v.owner,
   v.urgent?'Yes, self-reported':'No reported concern',v.due,v.soon,v.caseCount+v.repairCount,v.quoteValue,v.quoteCount,v.notes].map(escapeCsv).join(','));
