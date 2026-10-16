@@ -167,5 +167,55 @@ document.querySelectorAll('[data-fleet-filter]').forEach(b=>b.addEventListener('
 }));
 window.addEventListener('storage',e=>{if(Object.values(SOURCE_KEYS).includes(e.key)||e.key===ANNOTATION_KEY)reload()});
 window.addEventListener('pageshow',()=>reload());
+let selectedBackup=null;
+const statusBackup=text=>$('workspaceBackupStatus').textContent=String(text);
+$('backupWorkspace').addEventListener('click',()=>{
+ const manager=window.RavrentWorkspaceBackup;
+ if(!manager){statusBackup('Backup functions are unavailable. Reload the page.');return}
+ try{
+  const result=manager.exportData(localStorage);
+  if(!result.count){statusBackup('No records are saved in this browser yet. Add a Garage vehicle or case first.');return}
+  const blob=new Blob([result.content],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob),a=make('a');
+  a.href=url;a.download='ravrent-workspace-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+  statusBackup('Downloaded '+result.count+' local data sections'+(result.omitted?' ('+result.omitted+' invalid sections omitted)':'')+'. Keep this file private.')
+ }catch(e){statusBackup('Backup could not be created: '+(e.message||'Unknown error'))}
+});
+$('selectWorkspaceBackup').addEventListener('click',()=>$('workspaceBackupFile').click());
+$('workspaceBackupFile').addEventListener('change',async event=>{
+ const file=event.target.files?.[0];event.target.value='';selectedBackup=null;
+ const preview=$('workspaceRestorePreview');preview.hidden=true;
+ $('confirmWorkspaceRestore').checked=false;$('restoreWorkspace').disabled=true;
+ if(!file)return;
+ if(file.size>8*1024*1024){statusBackup('Backup is larger than 8 MB. Use smaller module-specific backups.');return}
+ try{
+  const input=JSON.parse(await file.text()),manager=window.RavrentWorkspaceBackup;
+  if(!manager)throw Error('The backup reader is unavailable.');
+  const plan=manager.planRestore(input,localStorage);
+  selectedBackup=input;
+  $('workspaceRestoreHeading').textContent='Review '+plan.keys.length+' saved sections';
+  const ready=plan.importable.map(k=>plan.keys.includes(k)?manager.DATASETS.find(x=>x[0]===k)?.[1]||k:k);
+  const kept=plan.existing.map(k=>manager.DATASETS.find(x=>x[0]===k)?.[1]||k);
+  $('workspaceRestoreDetails').textContent='Restorable: '+(ready.join(', ')||'none')+'. Existing sections kept unchanged: '+(kept.join(', ')||'none')+'.';
+  preview.hidden=false;
+  statusBackup('Backup loaded and validated. Choose Restore only after checking the included data sections.');
+  if(!plan.importable.length)$('restoreWorkspace').disabled=true;
+ }catch(e){selectedBackup=null;statusBackup('This file could not be validated: '+(e.message||'Invalid JSON'))}
+});
+$('confirmWorkspaceRestore').addEventListener('change',()=>{
+ if(!selectedBackup){$('restoreWorkspace').disabled=true;return}
+ try{const plan=window.RavrentWorkspaceBackup.planRestore(selectedBackup,localStorage);
+  $('restoreWorkspace').disabled=!$('confirmWorkspaceRestore').checked||!plan.importable.length
+ }catch{$('restoreWorkspace').disabled=true}
+});
+$('restoreWorkspace').addEventListener('click',()=>{
+ if(!selectedBackup||!$('confirmWorkspaceRestore').checked){statusBackup('Review and confirm the backup details before restoring.');return}
+ try{
+  const result=window.RavrentWorkspaceBackup.restoreMissing(selectedBackup,localStorage);
+  statusBackup('Restored '+result.restored.length+' data sections; preserved '+result.skipped.length+' existing sections. Reload the other tools to see imported data.');
+  selectedBackup=null;$('workspaceRestorePreview').hidden=true;reload()
+ }catch(e){statusBackup('Restore stopped: '+(e.message||'Storage could not save the imported data'))}
+});
 reload();
 })();
