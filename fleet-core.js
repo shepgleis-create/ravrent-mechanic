@@ -12,7 +12,7 @@ const money=v=>{const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=1e9?n:0};
 const isArray=x=>Array.isArray(x)?x:[];
 function vehicleName(v){return [v.year,v.make,v.model,v.trim].map(x=>trunc(x,80)).filter(Boolean).join(' ')||'Unknown garage vehicle'}
 function sanitizeAnnotations(obj){
- const out={};
+ const out=Object.create(null);
  if(!obj||typeof obj!=='object'||Array.isArray(obj))return out;
  for(const [key,value] of Object.entries(obj).slice(0,300)){
   if(!/^[a-zA-Z0-9_-]{1,100}$/.test(key)||!value||typeof value!=='object')continue;
@@ -66,7 +66,7 @@ function build({garage={},schedule={},repairCases=[],casebook=[],workshop=[],inv
    }catch{}
   }
   const lastObserved=Object.hasOwn(schedule.readings||{},id)?schedule.readings[id]:v.miles;
-  const miles=lastObserved!==null&&lastObserved!==''&&Number.isFinite(Number(lastObserved))&&Number(lastObserved)>=0?Math.round(Number(lastObserved)):null;
+  const miles=lastObserved!==null&&lastObserved!==''&&Number.isFinite(Number(lastObserved))&&Number(lastObserved)>0?Math.round(Number(lastObserved)):null;
   return {id,name:vehicleName(v),vin,engine:trunc(v.engine,100),miles,
    state:details.state,notes:details.notes,owner:details.owner,urgent,due,soon,rank,
    repairCount:openRepairs.length,caseCount:openCases.length,quoteCount:linkedQuotes.length,
