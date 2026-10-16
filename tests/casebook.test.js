@@ -43,7 +43,7 @@ test('casebook UI has complete usable controls and valid JavaScript',()=>{
  for(const id of ['caseDialog','caseForm','caseName','caseVehicle','caseVin','caseCodes','caseHazards','caseTests','caseAI','caseToWorkshop','caseList','casesBackup','casesImport','casePrint'])
   assert.ok(ids.includes(id),'Missing '+id);
  assert.equal(ids.length,new Set(ids).size,'Duplicate IDs');
- assert.ok(html.includes('src="/casebook-core.js"'));
+ assert.match(html,/src="\/casebook-core\.js(?:\?v=[^"]+)?"/);
  assert.doesNotMatch(html,/<a[^>]+href="https?:/i);
 });
 
