@@ -20,7 +20,7 @@ test('VIN, casebook, workshop and AI handoffs are internal and require explicit 
  assert.match(casebook,/ravrent_ai_intake_v1/);
  assert.match(casebook,/ravrent_workshop_intake_v1/);
  assert.match(shop,/typeof data\?\.note==='string'/);
- assert.match(chat,/\['vin','workshop','health','casebook'\]/);
+ for(const source of ['vin','workshop','health','casebook','fleet'])assert.match(chat,new RegExp("'"+source+"'"));
  for(const src of [vin,casebook,shop,chat])assert.doesNotThrow(()=>new vm.Script(src));
 });
 test('Casebook has no automatic AI requests, implied completed tests or paid checkout',()=>{
