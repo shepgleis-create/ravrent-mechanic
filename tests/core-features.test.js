@@ -23,16 +23,19 @@ test('health is truthful: installed credentials are not verified',()=>{
  }finally{if(old===undefined)delete process.env.GEMINI_API_KEY;else process.env.GEMINI_API_KEY=old;}
 });
 test('ads stay disabled without explicit publisher approval and toggle',()=>{
- const oldId=process.env.ADSENSE_PUBLISHER_ID,oldToggle=process.env.ADSENSE_ENABLED;
+ const keys=['ADSENSE_PUBLISHER_ID','ADSENSE_ENABLED','ADSENSE_APPROVED','ADSENSE_CONSENT_READY','ADSENSE_GUIDE_SLOT'];
+ const original=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
  try{
   process.env.ADSENSE_PUBLISHER_ID='ca-pub-1234567890123456';delete process.env.ADSENSE_ENABLED;
   let r=res();ads({method:'GET'},r);assert.equal(r.data.enabled,false);
   process.env.ADSENSE_ENABLED='true';r=res();ads({method:'GET'},r);
+  assert.equal(r.data.enabled,false,'Ads must remain off without consent, approval and slot');
+  process.env.ADSENSE_APPROVED='true';process.env.ADSENSE_CONSENT_READY='true';process.env.ADSENSE_GUIDE_SLOT='1234567890';
+  r=res();ads({method:'GET'},r);
   assert.equal(r.data.enabled,true);assert.equal(r.data.publisherId,'ca-pub-1234567890123456');
   process.env.ADSENSE_PUBLISHER_ID='incorrect';r=res();ads({method:'GET'},r);
   assert.equal(r.data.enabled,false);
- }finally{if(oldId===undefined)delete process.env.ADSENSE_PUBLISHER_ID;else process.env.ADSENSE_PUBLISHER_ID=oldId;
- if(oldToggle===undefined)delete process.env.ADSENSE_ENABLED;else process.env.ADSENSE_ENABLED=oldToggle;}
+ }finally{for(const k of keys){if(original[k]===undefined)delete process.env[k];else process.env[k]=original[k]}}
 });
 test('VIN decoder rejects malformed identifiers before calling external service',async()=>{
  const r=res();await vin({method:'GET',query:{vin:'SHORT'},headers:{'x-forwarded-for':'test-invalid'}},r);
