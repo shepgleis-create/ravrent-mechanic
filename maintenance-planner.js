@@ -122,7 +122,11 @@ function download(filename,contents,mime){
 const selector=$('scheduleVehicle');selector.replaceChildren();
 selector.append(new Option(vehicles.length?'Choose a garage vehicle':'No garage vehicles on this browser',''));
 for(const v of vehicles)selector.append(new Option(vehicleName(v),String(v.id)));
-if(vehicles.length)selector.value=String(vehicles[0].id);
+if(vehicles.length){
+ let requested='';
+ try{requested=new URLSearchParams(location.search).get('vehicle')||''}catch{}
+ selector.value=vehicles.some(v=>String(v.id)===requested)?requested:String(vehicles[0].id);
+}
 selector.addEventListener('change',()=>{clearForm();render()});
 $('saveMileage').addEventListener('click',()=>{
  const vehicle=currentVehicle(),value=$('scheduleMileage').value;
