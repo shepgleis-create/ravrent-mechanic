@@ -53,7 +53,7 @@ test('Vehicle Health Center links its planner and garage repair-case AI without 
  for(const id of ['scheduleVehicle','scheduleMileage','scheduleName','scheduleDueDate','scheduleDueMiles','scheduleEveryMiles','saveSchedule','scheduleList','exportCalendar','importScheduleFile']){
   assert.ok(html.includes('id="'+id+'"'),id+' is missing');
  }
- assert.match(app,/\['vin','workshop','health'\]/);
+ for(const source of ['vin','workshop','health','casebook'])assert.match(app,new RegExp("'"+source+"'"));
  assert.match(health,/source:'health'/);
  assert.match(ui,/ravrent_toolkit_v1/);
  assert.match(ui,/ravrent_service_schedule_v1/);
