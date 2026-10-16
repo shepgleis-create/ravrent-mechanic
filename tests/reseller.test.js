@@ -19,7 +19,7 @@ function start(intake=null){
  const get=name=>{if(!nodes.has(name))nodes.set(name,make(name));return nodes.get(name)};
  const document={getElementById:get,createElement:make,querySelectorAll:()=>[],body:{append(){}}};
  const storage=map=>({getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,String(v)),removeItem:k=>map.delete(k)});
- const context={document,window:{addEventListener(){},print(){printed=true}},localStorage:storage(stored),sessionStorage:storage(session),crypto:{randomUUID:()=>String(++id)},confirm:()=>true,Blob:class{constructor(parts){this.parts=parts}},URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:test'},revokeObjectURL(){}},fetch:()=>{throw Error('No network expected')}};
+ const context={document,window:{addEventListener(){},print(){printed=true}},localStorage:storage(stored),sessionStorage:storage(session),crypto:{randomUUID:()=>String(++id)},confirm:()=>true,Blob:class{constructor(parts){this.parts=parts}},URL:{createObjectURL:blob=>{downloads.push(blob);return 'blob:test'},revokeObjectURL(){}},setTimeout:fn=>{fn();return 1},fetch:()=>{throw Error('No network expected')}};
  vm.runInNewContext(source,context,{timeout:1200});
  const fire=(name,event)=>Promise.all((get(name).listeners[event]||[]).map(callback=>callback({preventDefault(){},target:{matches(){return true},files:get(name).files||[],value:get(name).value}})));
  const saved=()=>JSON.parse(stored.get('ravrent_reseller_inventory_v1')||'[]');
