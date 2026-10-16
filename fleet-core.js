@@ -1,8 +1,8 @@
 (function(root){'use strict';
 const maintenance=typeof module!=='undefined'&&module.exports?require('./maintenance-core'):root?.RavrentSchedule;
 if(!maintenance)throw Error('Vehicle maintenance calculations are not loaded');
-const workshop=typeof module!=='undefined'&&module.exports?require('./workshop-core'):root?.RavrentWorkshopCore;
-if(!workshop)throw Error('Workshop pricing calculations are not loaded');
+const quoteMath=typeof module!=='undefined'&&module.exports?require('./workshop-core'):root?.RavrentWorkshopCore;
+if(!quoteMath)throw Error('Workshop pricing calculations are not loaded');
 const VIN=/^[A-HJ-NPR-Z0-9]{17}$/;
 const FLAGS=['brakes','steering','fuelLeak','overheat','flashingCel','smoke'];
 const STATES=['active','inspection','hold','out_of_service'];
@@ -61,7 +61,7 @@ function build({garage={},schedule={},repairCases=[],casebook=[],workshop=[],inv
   for(const q of linkedQuotes){
    if(!['quoted','approved','progress'].includes(q.quoteStage))continue;
    try{
-    const total=workshop.calculate({items:q.items,discount:q.quoteDiscount,taxRate:q.quoteTax,depositPercent:q.quoteDeposit}).total;
+    const total=quoteMath.calculate({items:q.items,discount:q.quoteDiscount,taxRate:q.quoteTax,depositPercent:q.quoteDeposit}).total;
     if(Number.isFinite(total)&&total>=0&&total<1e8)quoteValue+=total;
    }catch{}
   }
